@@ -1,0 +1,75 @@
+import networkx as nx
+import numpy as np
+from scipy.stats import rv_discrete
+from collections import Counter
+
+# t = number of vertices
+# n = dimension (integer)
+# cluster_attachment = 'preferrential' / 'uniform'
+# new_vertex = 'density' / 'uniform'
+class RGG:
+    def __init__(self, t=1, n=1, cluster_attachment='preferrential', new_vertex = 'density', seed=None):
+        assert t > 0
+        assert n == 1  # TODO
+        self.n = n
+        self.cluster_attachment = cluster_attachment
+        self.new_vertex = new_vertex
+        np.random.seed(seed)
+
+        self.graph = nx.Graph()
+        # vertex is a pair (coords, cluster), coords is a tuple of floats
+        v0 = (tuple([0.0 for i in range(self.n)]), 1)
+        self.graph.add_node(v0)
+        self.clusters = Counter({1: 1})
+
+        # aux
+        self.bbox = [-0.5, 0.5]  # TODO 1-dimensional
+        for i in range(t-1):
+            self.add_vertex()
+
+    def add_vertex(self):
+        # Step 1. Choose cluster
+        clusters = sorted(self.clusters.keys())
+        new_cluster = len(clusters) + 1
+        if self.cluster_attachment == 'preferrential':
+            # probability of new cluster is 1 / (n_vertices + 1)
+            norm = float(sum(self.clusters.values())+1)
+            p_new = 1. / norm
+            probas = [self.clusters[cl] / norm for cl in clusters]
+        elif self.cluster_attachment == 'uniform':
+            # probability of new cluster is 1 / (n_clusters + 1)
+            norm = float(len(self.clusters.keys())+1)
+            p_new = 1. / norm
+            probas = [1. / norm for cl in clusters]
+        # determine if new cluster appears
+        if np.random.random() < p_new:
+            self.clusters[new_cluster] = 1
+            # generate new vertex
+            #coord = self._gen_1d_vertex(self.bbox[0], self.bbox[1])
+            coord = np.random.choice(self.bbox)  # select one boundary
+            new_vertex = ((coord,), new_cluster)
+        else:
+            distr = rv_discrete(values=(clusters, probas))
+            cl = distr.rvs(size=1)[0]
+            self.clusters[cl] += 1
+            # generate vertex from existing cluster
+            cluster_vertices = np.array([v[0][0] for v in self.graph.nodes() if v[1] == cl])
+            pivot = np.random.choice(cluster_vertices)
+            coord = self._gen_1d_vertex(pivot - 0.5, pivot + 0.5)
+            new_vertex = ((coord,), cl)
+        old_vertices = self.graph.nodes()
+        self.graph.add_node(new_vertex)
+        for v in old_vertices:
+            if abs(v[0][0] - new_vertex[0][0]) < 0.5:
+                self.graph.add_edge(v, new_vertex)
+
+    def degrees(self):
+        return [d[1] for d in self.graph.degree()]
+
+    def _gen_1d_vertex(self, left, right):
+        coord = np.random.uniform(left, right)
+        new_bounds = [coord - 0.5, coord + 0.5]
+        self.bbox[0] = min(self.bbox[0], new_bounds[0])
+        self.bbox[1] = max(self.bbox[1], new_bounds[1])
+        return coord
+
