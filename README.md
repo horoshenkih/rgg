@@ -1,0 +1,2 @@
+# rgg
+Random geometric graphs
