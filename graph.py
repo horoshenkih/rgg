@@ -12,6 +12,14 @@ class hyp_radius_density(rv_continuous):
     def _pdf(self, r):
         return self.alpha * np.sinh(self.alpha * r) / (np.cosh(self.alpha * self.R) - 1.)
 
+def hyp_distance_cosh(x1, x2):
+    r1, phi1 = x1
+    r2, phi2 = x2
+    return np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
+
+def hyp_distance(x1, x2):
+    return np.arccosh(hyp_distance_cosh(x1, x2))
+
 # hyperbolic random graph
 # nertex is a tuple (r, phi)
 class HypRG:
@@ -25,8 +33,21 @@ class HypRG:
         self.angle_distribution = uniform(loc=0., scale=2 * np.pi)
         self.radius_distribution = hyp_radius_density(self.alpha, self.R)()  # frozen
 
+        self.graph = nx.Graph()
         # generate vertices
-        self.V = self.generate_vertices()
+        self._vertices = self.generate_vertices()
+        for i, v in enumerate(self._vertices):
+            self.graph.add_node(v)
+            if i > 0:
+                for old_v in self._vertices[:i-1]:
+                    if hyp_distance(old_v, v) < self.R:
+                        self.graph.add_edge(old_v, v)
+
+    def vertices(self):
+        return self._vertices
+
+    def edges(self):
+        return list(self.graph.edges())
 
     def generate_vertices(self):
         # angle is uniform in [0, 2 * pi)
@@ -36,7 +57,7 @@ class HypRG:
         return zip(r, phi)
 
     def degrees(self):
-        pass
+        return [d[1] for d in self.graph.degree()]
 
 
 # t = number of vertices
