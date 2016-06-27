@@ -1,7 +1,43 @@
 import networkx as nx
 import numpy as np
-from scipy.stats import rv_discrete
+from scipy.stats import rv_discrete, rv_continuous, uniform
 from collections import Counter
+
+class hyp_radius_density(rv_continuous):
+    def __init__(self, alpha, R):
+        self.alpha = alpha
+        self.R = R
+        super(hyp_radius_density, self).__init__(a=0., b=R)
+
+    def _pdf(self, r):
+        return self.alpha * np.sinh(self.alpha * r) / (np.cosh(self.alpha * self.R) - 1.)
+
+# hyperbolic random graph
+# nertex is a tuple (r, phi)
+class HypRG:
+    def __init__(self, n, alpha=1., C=0., seed=0):
+        self.n = n
+        self.alpha = 1.
+        self.C = 0.
+
+        # prepare
+        self.R = 2 * np.log(self.n) + self.C
+        self.angle_distribution = uniform(loc=0., scale=2 * np.pi)
+        self.radius_distribution = hyp_radius_density(self.alpha, self.R)()  # frozen
+
+        # generate vertices
+        self.V = self.generate_vertices()
+
+    def generate_vertices(self):
+        # angle is uniform in [0, 2 * pi)
+        # radius has density alpha * sinh(alpha * R) / (cosh(alpha * R) - 1)
+        r = self.radius_distribution.rvs(size=self.n)
+        phi = self.angle_distribution.rvs(size=self.n)
+        return zip(r, phi)
+
+    def degrees(self):
+        pass
+
 
 # t = number of vertices
 # n = dimension (integer)

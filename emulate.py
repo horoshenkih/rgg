@@ -1,8 +1,12 @@
-from graph import RGG
+from graph import RGG, HypRG
 
-rgg = RGG(
-    t=100,
-    #cluster_attachment='uniform'
-)
-print rgg.clusters
-print sorted(rgg.degrees())
+if False:
+    rgg = RGG(
+        t=100,
+        #cluster_attachment='uniform'
+    )
+    print rgg.clusters
+    print sorted(rgg.degrees())
+
+g = HypRG(10000)
+print(len(g.V))
