@@ -22,14 +22,16 @@ def hyp_distance(x1, x2):
 
 # hyperbolic random graph
 # nertex is a tuple (r, phi)
+# TODO inherit nx.Graph()?
 class HypRG:
     def __init__(self, n, alpha=1., C=0., seed=0):
         self.n = n
-        self.alpha = 1.
-        self.C = 0.
+        self.alpha = alpha
+        self.C = C
 
         # prepare
         self.R = 2 * np.log(self.n) + self.C
+        assert self.R > 0
         self.angle_distribution = uniform(loc=0., scale=2 * np.pi)
         self.radius_distribution = hyp_radius_density(self.alpha, self.R)()  # frozen
 
@@ -59,6 +61,8 @@ class HypRG:
     def degrees(self):
         return [d[1] for d in self.graph.degree()]
 
+    def components(self):
+        return sorted(nx.connected_component_subgraphs(self.graph), key=len, reverse=True)
 
 # t = number of vertices
 # n = dimension (integer)

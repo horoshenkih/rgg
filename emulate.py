@@ -14,7 +14,8 @@ def main():
     args = parser.parse_args()
     n = args.n
     alpha = args.alpha
-    g = HypRG(n,alpha=alpha)
+    C = args.C
+    g = HypRG(n,alpha=alpha,C=C)
     v = g.vertices()
     e = g.edges()
 
@@ -32,16 +33,18 @@ def main():
         ax.plot((phi1, phi2), (r1, r2), color='g')
 
     deg = g.degrees()
-    n_isolated_vertices = deg[0]
+    n_isolated_vertices = len([d for d in deg if d == 0])
     deg_dist = [i for i in Counter(deg).iteritems() if i[0] > 0]
     degs, counts = zip(*deg_dist)
     freqs = [float(c) / n for c in counts]
     ax_deg = plt.subplot(122)
-    ax_deg.set_xscale("log")
-    ax_deg.set_yscale("log")
-    ax_deg.errorbar(degs, freqs)
+    ax_deg.loglog(degs, freqs, marker='o', linewidth=0)
+    ax_deg.grid(True)
 
-    print "size of giant component: {}".format(n - n_isolated_vertices)
+    print "n isolated vertices: {}".format(n_isolated_vertices)
+    components = g.components()
+    print "n components: {}".format(len(components))
+    print "largest compoment size: {}".format(len(components[0]))
     plt.show()
 
 if __name__ == '__main__':
