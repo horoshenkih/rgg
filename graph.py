@@ -66,10 +66,10 @@ class HypRG:
 
 # t = number of vertices
 # n = dimension (integer)
-# cluster_attachment = 'preferrential' / 'uniform'
+# cluster_attachment = 'preferential' / 'uniform'
 # new_vertex = 'density' / 'uniform'
 class RGG:
-    def __init__(self, t=1, n=1, cluster_attachment='preferrential', new_vertex = 'density', seed=None):
+    def __init__(self, t=1, n=1, cluster_attachment='preferential', new_vertex = 'density', seed=None):
         assert t > 0
         assert n == 1  # TODO
         self.n = n
@@ -92,7 +92,7 @@ class RGG:
         # Step 1. Choose cluster
         clusters = sorted(self.clusters.keys())
         new_cluster = len(clusters) + 1
-        if self.cluster_attachment == 'preferrential':
+        if self.cluster_attachment == 'preferential':
             # probability of new cluster is 1 / (n_vertices + 1)
             norm = float(sum(self.clusters.values())+1)
             p_new = 1. / norm
