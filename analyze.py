@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from collections import Counter
 
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 
 def parse_vertex(raw_vertex, layout):
@@ -74,8 +75,21 @@ def main():
     if args.pd:
         plot_idx = plot2idx['degrees']
         ax_deg = plt.subplot(1, n_plots, plot_idx)
+        plt.title('Degree distribution')
         ax_deg.loglog(degs, freqs, marker='o', linewidth=0)
+        # fit in logarithmic scale
+        # truncate 10% boundary degrees
+        x = np.log(degs)
+        y = np.log(freqs)
+        xy = sorted(zip(x, y), key=lambda z: z[0])
+        truncate_xy = int(0.1 * len(xy))
+        xy = xy[truncate_xy:-truncate_xy]
+        x, y = zip(*xy)
+
+        fit = np.polyfit(x, y, 1)
+        ax_deg.loglog(np.exp(x), np.exp(np.poly1d(fit)(x)), label="{0:.2f}x{1:+.2f}".format(*fit))
         ax_deg.grid(True)
+        ax_deg.legend()
 
     # plot graph
     if args.pg:
