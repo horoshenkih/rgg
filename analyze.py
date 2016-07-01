@@ -33,6 +33,8 @@ def main():
     print "read graph"
     graph = nx.Graph()
     for line in graph_f:
+        if line.startswith('#'):
+            continue
         items = line.rstrip().split()
         v1 = parse_vertex(items[0], args.layout)
         v2 = parse_vertex(items[1], args.layout)
