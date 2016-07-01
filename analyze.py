@@ -18,6 +18,7 @@ def parse_vertex(raw_vertex, layout):
 def main():
     parser = ArgumentParser()
     parser.add_argument('-f', help='file with graph (edges)')
+    parser.add_argument('--clustering', help='compute clustering coefficients (may be slow for big graphs)', action='store_true')
     parser.add_argument('--pg', action='store_true', help='plot graph')
     parser.add_argument('--layout', help='graph layout (no, polar, 2d)', default='no')
     parser.add_argument('--pd', action='store_true', help='plot degree distribution')
@@ -48,11 +49,17 @@ def main():
     degs, counts = zip(*deg_dist)
     freqs = [float(c) / n for c in counts]
 
+    # components
     print "n isolated vertices: {}".format(n_isolated_vertices)
     components = sorted(nx.connected_component_subgraphs(graph), key=len, reverse=True)
     print "n components: {}".format(len(components))
     print "n nontrivial components: {}".format(len(components) - n_isolated_vertices)
     print "largest compoment size: {}".format(len(components[0]))
+
+    # clustering
+    if args.clustering:
+        print "Global clustering coefficient (transitivity): {0:.5f}".format(nx.transitivity(graph))
+        print "Local clustering coefficient (average clustering): {0:.5f}".format(nx.average_clustering(graph))
 
     # plots
     plots = [
