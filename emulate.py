@@ -14,6 +14,7 @@ def main():
     parser.add_argument('--alpha', type=float, help='alpha', default=1.)
     parser.add_argument('-C', type=float, help='C', default=0.)
     parser.add_argument('-f', help='outfile')
+    parser.add_argument('-s', '--seed', help='random seed', type=int)
 
     args = parser.parse_args()
 
@@ -25,7 +26,8 @@ def main():
     n = args.n
     alpha = args.alpha
     C = args.C
-    g = HypRG(n,alpha=alpha,C=C)
+    seed = 0 if args.seed is None else args.seed
+    g = HypRG(n, alpha=alpha, C=C, seed=seed)
 
     for e in g.edges():
         e_fmt = []

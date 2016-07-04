@@ -28,6 +28,7 @@ class HypRG:
         self.n = n
         self.alpha = alpha
         self.C = C
+        np.random.seed(seed)
 
         # prepare
         self.R = 2 * np.log(self.n) + self.C
