@@ -21,7 +21,7 @@ def hyp_distance(x1, x2):
     return np.arccosh(hyp_distance_cosh(x1, x2))
 
 # hyperbolic random graph
-# nertex is a tuple (r, phi)
+# vertex is a tuple (r, phi)
 # TODO inherit nx.Graph()?
 class HypRG:
     def __init__(self, n, alpha=1., C=0., seed=0):
@@ -33,8 +33,8 @@ class HypRG:
         # prepare
         self.R = 2 * np.log(self.n) + self.C
         assert self.R > 0
-        self.angle_distribution = uniform(loc=0., scale=2 * np.pi)
-        self.radius_distribution = hyp_radius_density(self.alpha, self.R)()  # frozen
+        self.angle_distribution = uniform(loc=0., scale=2 * np.pi).rvs
+        self.radius_distribution = hyp_radius_density(self.alpha, self.R)().rvs  # frozen
 
         self.graph = nx.Graph()
         # generate vertices
@@ -55,8 +55,8 @@ class HypRG:
     def generate_vertices(self):
         # angle is uniform in [0, 2 * pi)
         # radius has density alpha * sinh(alpha * R) / (cosh(alpha * R) - 1)
-        r = self.radius_distribution.rvs(size=self.n)
-        phi = self.angle_distribution.rvs(size=self.n)
+        r = self.radius_distribution(size=self.n)
+        phi = self.angle_distribution(size=self.n)
         return zip(r, phi)
 
     def degrees(self):
