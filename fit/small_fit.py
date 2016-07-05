@@ -11,18 +11,27 @@ def cosh_d(v1, v2):
 
     return np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
 
-def find_embeddings(vertices, edges):
+def find_embeddings(vertices, edges, mode):
     "find (r, phi) for each vertex"
     n = len(vertices)
     R = 2 * np.log(n)
-    # benchmark: phi=rand, r = 2log(n/k)
-    degrees = defaultdict(int)
-    for v1, v2 in edges:
-        degrees[v1] += 1
-        degrees[v2] += 1
 
     np.random.seed(0)
-    return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
+    if mode=='random':
+        # phi=rand(0, 2pi), r = rand(0,R)
+        return {v: (np.random.uniform(0.0, R), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
+    elif mode == 'degrees':
+        # phi=rand(0,2pi), r = 2log(n/k)
+        degrees = defaultdict(int)
+        for v1, v2 in edges:
+            degrees[v1] += 1
+            degrees[v2] += 1
+
+        return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
+    elif mode == 'fit':
+        raise Exception('not implemented yet')
+    else:
+        raise Exception('unknown mode')
 
 def evaluate_embeddings(embeddings, edges):
     "evaluate quality of embeddings compared with real elge set"
@@ -50,6 +59,7 @@ def evaluate_embeddings(embeddings, edges):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
+    parser.add_argument('--mode', default='fit', help='random|degrees|fit')
 
     args = parser.parse_args()
     vertices = set()
@@ -64,8 +74,7 @@ def main():
     print "Number of edges: {}".format(len(edges))
     print "Number of non-edges: {}".format(n*(n-1)/2 - len(edges))
 
-    embeddings = find_embeddings(vertices, edges)
-    print embeddings
+    embeddings = find_embeddings(vertices, edges, mode=args.mode)
     report = evaluate_embeddings(embeddings, edges)
 
     print 'report'
