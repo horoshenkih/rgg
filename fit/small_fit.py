@@ -15,8 +15,14 @@ def find_embeddings(vertices, edges):
     "find (r, phi) for each vertex"
     n = len(vertices)
     R = 2 * np.log(n)
-    # TODO
-    return {v: (0., 0.) for v in vertices}
+    # benchmark: phi=rand, r = 2log(n/k)
+    degrees = defaultdict(int)
+    for v1, v2 in edges:
+        degrees[v1] += 1
+        degrees[v2] += 1
+
+    np.random.seed(0)
+    return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
 
 def evaluate_embeddings(embeddings, edges):
     "evaluate quality of embeddings compared with real elge set"
@@ -59,6 +65,7 @@ def main():
     print "Number of non-edges: {}".format(n*(n-1)/2 - len(edges))
 
     embeddings = find_embeddings(vertices, edges)
+    print embeddings
     report = evaluate_embeddings(embeddings, edges)
 
     print 'report'
