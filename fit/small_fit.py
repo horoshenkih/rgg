@@ -12,13 +12,53 @@ def cosh_d(v1, v2):
 
     return np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
 
+def grad_cosh_d(v1, v2):
+    r1, phi1 = v1
+    r2, phi2 = v2
+
+    ddr1 = np.sinh(r1) * np.cosh(r2) - np.cosh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
+    ddr2 = np.cosh(r1) * np.sinh(r2) - np.sinh(r1) * np.cosh(r2) * np.cos(phi1 - phi2)
+    ddphi1 = np.sinh(r1) * np.sinh(r2) * np.sin(phi1 - phi2)
+    ddphi2 = -ddphi1
+
+    return np.array((ddr1, ddphi1, ddr2, ddphi2))
+
+class Margin:
+    "difference between log cosh(distance) and log cosh(R)"
+    def __init__(self, R):
+        self.coshR = np.cosh(R)
+    def __call__(self, r1, phi1, r2, phi2):
+        cd = cosh_d((r1, phi1), (r2, phi2))
+        return np.log(cd / self.coshR)
+
+class GradMargin(Margin):
+    "gradient of margin wrt r1, phi1, r2, phi2"
+    def __call__(self, r1, phi1, r2, phi2):
+        cd = cosh_d((r1, phi1), (r2, phi2))
+        grad_cd = grad_cosh_d((r1, phi1), (r2, phi2))
+        return grad_cd / cd
+
+class Smooth:
+    "approximation of step function of margin"
+    def __call__(self, margin):
+        return 1 / (1. + np.exp(margin))
+
+class GradSmooth(Smooth):
+    "gradient of step function approximation wrt margin"
+    def __call__(self, margin):
+        return np.exp(margin) / (1. + np.exp(margin))**2
+
 class Q:
     "loss function to minimize"
     def __init__(self, vertices, edges):
         self.vertices = vertices
         self.edges = edges
         n = len(vertices)
-        self.coshR = np.cosh(2 * np.log(n))
+        R = 2 * np.log(n)
+        self.coshR = np.cosh(R)
+
+        self.margin = Margin(R)
+        self.smooth = Smooth()
 
     def __call__(self, x):
         "x = [r1, phi1, r2, phi2, ...] for vertex sequence v1, v2, ..."
@@ -31,7 +71,10 @@ class Q:
             phi1 = x[2*i1+1]
             r2 = x[2*i2]
             phi2 = x[2*i2+1]
-            pred_edge = 1. if cosh_d((r1, phi1), (r2, phi2)) <= self.coshR else 0.
+
+            z = self.margin(r1, phi1, r2, phi2)
+            pred_edge = self.smooth(z)
+            #pred_edge = 1. if cosh_d((r1, phi1), (r2, phi2)) <= self.coshR else 0.
             if (v1, v2) in self.edges or (v2, v1) in self.edges:
                 true_edge = 1.
             else:
@@ -46,25 +89,26 @@ def find_embeddings(vertices, edges, mode):
     R = 2 * np.log(n)
 
     np.random.seed(0)
+    degrees = defaultdict(int)
+    for v1, v2 in edges:
+        degrees[v1] += 1
+        degrees[v2] += 1
     if mode=='random':
         # phi=rand(0, 2pi), r = rand(0,R)
         return {v: (np.random.uniform(0.0, R), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode == 'degrees':
         # phi=rand(0,2pi), r = 2log(n/k)
-        degrees = defaultdict(int)
-        for v1, v2 in edges:
-            degrees[v1] += 1
-            degrees[v2] += 1
         return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode == 'fit':
         x0 = []
-        for (r, phi) in zip([np.random.uniform(0.0, R) for v in vertices], [np.random.uniform(0.0, 2*np.pi) for v in vertices]):
+        for (r, phi) in zip([2*np.log(n / degrees[v]) for v in vertices], [np.random.uniform(0.0, 2*np.pi) for v in vertices]):
             x0.append(r)
             x0.append(phi)
         x0 = np.array(x0)
 
         q = Q(vertices, edges)
-        res = minimize(q, x0)
+        res = minimize(q, x0, method='Nelder-Mead')
+        print res
         retval = {}
         for i in range(len(vertices)):
             r = res.x[2*i]
