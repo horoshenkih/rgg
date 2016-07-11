@@ -41,77 +41,98 @@ class GradMargin(Margin):
 
 class Smooth:
     "approximation of step function of margin"
+    def __init__(self, scale=1., height=1.):
+        self.height = height
+        self.scale = scale
     def __call__(self, margin):
-        return 1 / (1. + np.exp(margin))
+        return 1 / (1. + np.exp(margin * self.scale)) * self.height
 
 class GradSmooth(Smooth):
     "gradient of step function approximation wrt margin"
     def __call__(self, margin):
-        return -np.exp(margin) / (1. + np.exp(margin))**2
+        return -np.exp(margin * self.scale) / (1. + np.exp(margin * self.scale))**2 * self.height * self.scale
 
 class Q:
     "loss function to minimize"
-    def __init__(self, vertices, edges):
+    def __init__(self, vertices, edges, nedges):
         self.vertices = vertices
         self.edges = edges
+        self.nedges = nedges
         n = len(vertices)
         assert n > 1
         R = 2 * np.log(n)
         self.coshR = np.cosh(R)
         self.non_edge_weight = 2. * len(self.edges) / n / (n-1)
+        #self.non_edge_weight = len(self.edges) / len(self.nedges) if len(self.nedges) else 1.
 
         self.margin = Margin(R)
         self.grad_margin = GradMargin(R)
-        self.smooth = Smooth()
-        self.grad_smooth = GradSmooth()
+
+        smooth_scale = 1.
+        self.smooth = Smooth(scale=smooth_scale)
+        self.grad_smooth = GradSmooth(scale=smooth_scale)
+
+    def __value_term(self, x, v1, v2, true_edge):
+        i1 = self.vertices.index(v1)
+        i2 = self.vertices.index(v2)
+        r1 = x[2*i1]
+        phi1 = x[2*i1+1]
+        r2 = x[2*i2]
+        phi2 = x[2*i2+1]
+
+        z = self.margin(r1, phi1, r2, phi2)
+        pred_edge = self.smooth(z)
+        w = 1. if true_edge else self.non_edge_weight
+        return (pred_edge - true_edge)**2 * w
 
     def __call__(self, x):
         "x = [r1, phi1, r2, phi2, ...] for vertex sequence v1, v2, ..."
         value = 0.
         assert len(x) % 2 == 0
-        for (v1, v2) in combinations(self.vertices, 2):
-            i1 = self.vertices.index(v1)
-            i2 = self.vertices.index(v2)
-            r1 = x[2*i1]
-            phi1 = x[2*i1+1]
-            r2 = x[2*i2]
-            phi2 = x[2*i2+1]
-
-            z = self.margin(r1, phi1, r2, phi2)
-            pred_edge = self.smooth(z)
-            #pred_edge = 1. if cosh_d((r1, phi1), (r2, phi2)) <= self.coshR else 0.
-            if (v1, v2) in self.edges or (v2, v1) in self.edges:
-                true_edge = 1.
-            else:
-                true_edge = 0.
-            w = 1. if true_edge else self.non_edge_weight
-            value += (pred_edge - true_edge)**2 * w
+        for (v1, v2) in self.edges:
+            value += self.__value_term(x, v1, v2, 1.)
+        for (v1, v2) in self.nedges:
+            value += self.__value_term(x, v1, v2, 0.)
         return value
 
 class GradQ(Q):
+    def __grad_terms(self, x, i1, i2, true_edge):
+        r1 = x[2*i1]
+        phi1 = x[2*i1+1]
+        r2 = x[2*i2]
+        phi2 = x[2*i2+1]
+
+        z = self.margin(r1, phi1, r2, phi2)
+        smooth_der = self.grad_smooth(z)
+        margin_der = self.grad_margin(r1, phi1, r2, phi2)
+
+        v1 = self.vertices[i1]
+        v2 = self.vertices[i2]
+        w = 1. if true_edge else self.non_edge_weight
+        disc = 2 * (self.smooth(z) - true_edge) * w
+
+        return disc * smooth_der * margin_der
+
     def __call__(self, x):
         assert len(x) % 2 == 0
 
         value = np.zeros(len(x))
-        for (v1, v2) in combinations(self.vertices, 2):
+        for (v1, v2) in self.edges:
             i1 = self.vertices.index(v1)
             i2 = self.vertices.index(v2)
-            r1 = x[2*i1]
-            phi1 = x[2*i1+1]
-            r2 = x[2*i2]
-            phi2 = x[2*i2+1]
-
-            z = self.margin(r1, phi1, r2, phi2)
-            smooth_der = self.grad_smooth(z)
-            margin_der = self.grad_margin(r1, phi1, r2, phi2)
-            true_edge = 1. if ((v1, v2) in self.edges or (v2, v1) in self.edges) else 0.
-            w = 1. if true_edge else self.non_edge_weight
-            disc = 2 * (self.smooth(z) - true_edge) * w
-            value[2*i1]   += disc * smooth_der * margin_der[0]  # r1
-            value[2*i1+1] += disc * smooth_der * margin_der[1]  # phi1
-            value[2*i2]   += disc * smooth_der * margin_der[2]  # r2
-            value[2*i2+1] += disc * smooth_der * margin_der[3]  # phi2
-
+            v = self.__grad_terms(x, i1, i2, 1.)
+            value[2*i1]   += v[0]  # r1
+            value[2*i1+1] += v[1]  # phi1
+            value[2*i2]   += v[2]  # r2
+            value[2*i2+1] += v[3]  # phi2
+        for (v1, v2) in self.nedges:
+            i1 = self.vertices.index(v1)
+            i2 = self.vertices.index(v2)
+            v = self.__grad_terms(x, i1, i2, 0.)
+            value[2*i1]   += v[0]  # r1
+            value[2*i1+1] += v[1]  # phi1
+            value[2*i2]   += v[2]  # r2
+            value[2*i2+1] += v[3]  # phi2
         return value
 
 def find_embeddings(vertices, edges, mode):
@@ -138,11 +159,13 @@ def find_embeddings(vertices, edges, mode):
             x0.append(phi)
         x0 = np.array(x0)
 
-        q = Q(vertices, edges)
-        grad_q = GradQ(vertices, edges)
+        nedges = set()
+        for (v1, v2) in combinations(vertices, 2):
+            if (v1, v2) not in edges and (v2, v1) not in edges:
+                nedges.add((v1, v2))
+        q = Q(vertices, edges, nedges)
+        grad_q = GradQ(vertices, edges, nedges)
         print "Check gradient: ", check_grad(q, grad_q, x0)
-        #res = minimize(q, x0, method='Nelder-Mead')
-        #res = minimize(q, x0, method='Newton-CG', jac=grad_q)
         res = minimize(q, x0, method='BFGS', jac=grad_q)
         #print res
         retval = {}
