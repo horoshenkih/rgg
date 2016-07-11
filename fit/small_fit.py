@@ -3,6 +3,7 @@ import argparse
 from collections import defaultdict
 from itertools import combinations
 
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize, check_grad
@@ -152,7 +153,7 @@ def find_embeddings(vertices, edges, mode):
     elif mode == 'degrees':
         # phi=rand(0,2pi), r = 2log(n/k)
         return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
-    elif mode == 'fit':
+    elif mode.startswith('fit'):
         x0 = []
         for (r, phi) in zip([2*np.log(n / degrees[v]) for v in vertices], [np.random.uniform(0.0, 2*np.pi) for v in vertices]):
             x0.append(r)
@@ -160,9 +161,16 @@ def find_embeddings(vertices, edges, mode):
         x0 = np.array(x0)
 
         nedges = set()
+        all_nedges = set()
         for (v1, v2) in combinations(vertices, 2):
             if (v1, v2) not in edges and (v2, v1) not in edges:
-                nedges.add((v1, v2))
+                all_nedges.add((v1, v2))
+        if mode == 'fit_random':
+            a = list(all_nedges)
+            random.shuffle(a)
+            nedges = set(a[:len(edges)])
+        else:
+            nedges = all_nedges.copy()
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
         print "Check gradient: ", check_grad(q, grad_q, x0)
