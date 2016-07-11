@@ -55,8 +55,10 @@ class Q:
         self.vertices = vertices
         self.edges = edges
         n = len(vertices)
+        assert n > 1
         R = 2 * np.log(n)
         self.coshR = np.cosh(R)
+        self.non_edge_weight = 2. * len(self.edges) / n / (n-1)
 
         self.margin = Margin(R)
         self.grad_margin = GradMargin(R)
@@ -82,7 +84,8 @@ class Q:
                 true_edge = 1.
             else:
                 true_edge = 0.
-            value += (pred_edge - true_edge)**2
+            w = 1. if true_edge else self.non_edge_weight
+            value += (pred_edge - true_edge)**2 * w
         return value
 
 class GradQ(Q):
@@ -102,7 +105,8 @@ class GradQ(Q):
             smooth_der = self.grad_smooth(z)
             margin_der = self.grad_margin(r1, phi1, r2, phi2)
             true_edge = 1. if ((v1, v2) in self.edges or (v2, v1) in self.edges) else 0.
-            disc = 2 * (self.smooth(z) - true_edge)
+            w = 1. if true_edge else self.non_edge_weight
+            disc = 2 * (self.smooth(z) - true_edge) * w
             value[2*i1]   += disc * smooth_der * margin_der[0]  # r1
             value[2*i1+1] += disc * smooth_der * margin_der[1]  # phi1
             value[2*i2]   += disc * smooth_der * margin_der[2]  # r2
