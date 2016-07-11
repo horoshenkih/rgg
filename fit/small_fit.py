@@ -4,7 +4,8 @@ from collections import defaultdict
 from itertools import combinations
 
 import numpy as np
-from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize, check_grad
 
 def cosh_d(v1, v2):
     r1, phi1 = v1
@@ -46,7 +47,7 @@ class Smooth:
 class GradSmooth(Smooth):
     "gradient of step function approximation wrt margin"
     def __call__(self, margin):
-        return np.exp(margin) / (1. + np.exp(margin))**2
+        return -np.exp(margin) / (1. + np.exp(margin))**2
 
 class Q:
     "loss function to minimize"
@@ -58,7 +59,9 @@ class Q:
         self.coshR = np.cosh(R)
 
         self.margin = Margin(R)
+        self.grad_margin = GradMargin(R)
         self.smooth = Smooth()
+        self.grad_smooth = GradSmooth()
 
     def __call__(self, x):
         "x = [r1, phi1, r2, phi2, ...] for vertex sequence v1, v2, ..."
@@ -80,6 +83,31 @@ class Q:
             else:
                 true_edge = 0.
             value += (pred_edge - true_edge)**2
+        return value
+
+class GradQ(Q):
+    def __call__(self, x):
+        assert len(x) % 2 == 0
+
+        value = np.zeros(len(x))
+        for (v1, v2) in combinations(self.vertices, 2):
+            i1 = self.vertices.index(v1)
+            i2 = self.vertices.index(v2)
+            r1 = x[2*i1]
+            phi1 = x[2*i1+1]
+            r2 = x[2*i2]
+            phi2 = x[2*i2+1]
+
+            z = self.margin(r1, phi1, r2, phi2)
+            smooth_der = self.grad_smooth(z)
+            margin_der = self.grad_margin(r1, phi1, r2, phi2)
+            true_edge = 1. if ((v1, v2) in self.edges or (v2, v1) in self.edges) else 0.
+            disc = 2 * (self.smooth(z) - true_edge)
+            value[2*i1]   += disc * smooth_der * margin_der[0]  # r1
+            value[2*i1+1] += disc * smooth_der * margin_der[1]  # phi1
+            value[2*i2]   += disc * smooth_der * margin_der[2]  # r2
+            value[2*i2+1] += disc * smooth_der * margin_der[3]  # phi2
+
         return value
 
 def find_embeddings(vertices, edges, mode):
@@ -107,8 +135,12 @@ def find_embeddings(vertices, edges, mode):
         x0 = np.array(x0)
 
         q = Q(vertices, edges)
-        res = minimize(q, x0, method='Nelder-Mead')
-        print res
+        grad_q = GradQ(vertices, edges)
+        print "Check gradient: ", check_grad(q, grad_q, x0)
+        #res = minimize(q, x0, method='Nelder-Mead')
+        #res = minimize(q, x0, method='Newton-CG', jac=grad_q)
+        res = minimize(q, x0, method='BFGS', jac=grad_q)
+        #print res
         retval = {}
         for i in range(len(vertices)):
             r = res.x[2*i]
@@ -146,6 +178,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
     parser.add_argument('--mode', default='fit', help='random|degrees|fit')
+    parser.add_argument('-p', '--plot', action='store_true', help='plot visualization')
 
     args = parser.parse_args()
     vertices = set()
@@ -166,6 +199,20 @@ def main():
     print 'report'
     for k in sorted(report.keys()):
         print '{}: {}'.format(k, report[k])
+    if args.plot:
+        # vertices
+        r, phi = zip(*embeddings.values())
+        ax = plt.subplot(111, projection='polar')
+        ax.plot(phi, r, marker='o', linewidth=0)
+
+        # edges
+        '''
+        for (v1, v2) in graph.edges():
+            r1, phi1 = v1
+            r2, phi2 = v2
+            ax.plot((phi1, phi2), (r1, r2), color='g')
+        '''
+        plt.show()
 
 if __name__ == '__main__':
     main()
