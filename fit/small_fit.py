@@ -63,7 +63,7 @@ class Q:
         R = 2 * np.log(n)
         self.coshR = np.cosh(R)
         #self.non_edge_weight = 2. * len(self.edges) / n / (n-1)
-        self.non_edge_weight = len(self.edges) / len(self.nedges) if len(self.nedges) else 1.
+        self.non_edge_weight = float(len(self.edges)) / len(self.nedges) if len(self.nedges) else 1.
 
         self.margin = Margin(R)
         self.grad_margin = GradMargin(R)
