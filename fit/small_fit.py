@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize, check_grad
 import networkx as nx
+from sklearn.metrics import roc_auc_score
 
 def cosh_d(v1, v2):
     r1, phi1 = v1
@@ -245,6 +246,7 @@ def evaluate_embeddings(embeddings, edges):
     coshR = np.cosh(R)
 
     report = defaultdict(int)
+    # contingency matrix
     for v1, v2 in combinations(embeddings.keys(), 2):
         is_true_edge = (v1, v2) in edges or (v2, v1) in edges
         is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2]) <= coshR
@@ -259,6 +261,19 @@ def evaluate_embeddings(embeddings, edges):
             else:
                 report['true_negative'] += 1
 
+    # vertexwise ROC-AUC
+    all_vertex_aucs = []
+    for v1 in embeddings.keys():
+        true = []
+        predicted = []
+        for v2 in embeddings.keys():
+            is_true_edge = (v1, v2) in edges or (v2, v1) in edges
+            is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2])
+            true.append(is_true_edge)
+            predicted.append(-is_predicted_edge)
+        auc = roc_auc_score(true, predicted)
+        all_vertex_aucs.append(auc)
+    report['vertexwise_auc'] = np.mean(all_vertex_aucs)
     return report
 
 def main():
