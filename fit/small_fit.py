@@ -2,10 +2,10 @@
 import argparse
 from collections import defaultdict
 from itertools import combinations
+import os
 
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import minimize, check_grad
 import networkx as nx
 from sklearn.metrics import roc_auc_score
@@ -146,13 +146,16 @@ def find_embeddings(vertices, edges, mode):
 
     np.random.seed(0)
     degrees = defaultdict(int)
+    print "count degrees"
     for v1, v2 in edges:
         degrees[v1] += 1
         degrees[v2] += 1
     if mode=='random':
+        print "mode: random"
         # phi=rand(0, 2pi), r = rand(0,R)
         return {v: (np.random.uniform(0.0, R), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode == 'degrees':
+        print "mode: degrees"
         # phi=rand(0,2pi), r = 2log(n/k)
         return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode.startswith('fit'):
@@ -247,6 +250,8 @@ def evaluate_embeddings(embeddings, edges):
 
     report = defaultdict(int)
     # contingency matrix
+    if os.environ['DEBUG']:
+        print "DEBUG: evaluate contingency matrix"
     for v1, v2 in combinations(embeddings.keys(), 2):
         is_true_edge = (v1, v2) in edges or (v2, v1) in edges
         is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2]) <= coshR
@@ -262,8 +267,10 @@ def evaluate_embeddings(embeddings, edges):
                 report['true_negative'] += 1
 
     # vertexwise ROC-AUC
+    if os.environ['DEBUG']:
+        print "DEBUG: evaluate vertexwise AUC"
     all_vertex_aucs = []
-    for v1 in embeddings.keys():
+    for i_v1, v1 in enumerate(embeddings.keys()):
         true = []
         predicted = []
         for v2 in embeddings.keys():
@@ -295,13 +302,16 @@ def main():
     print "Number of edges: {}".format(len(edges))
     print "Number of non-edges: {}".format(n*(n-1)/2 - len(edges))
 
+    print "Find embeddings"
     embeddings = find_embeddings(vertices, edges, mode=args.mode)
+    print "Evaluate embeddings"
     report = evaluate_embeddings(embeddings, edges)
 
     print 'report'
     for k in sorted(report.keys()):
         print '{}: {}'.format(k, report[k])
     if args.plot:
+        import matplotlib.pyplot as plt
         # vertices
         r, phi = zip(*embeddings.values())
         ax = plt.subplot(111, projection='polar')
