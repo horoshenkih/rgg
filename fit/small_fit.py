@@ -279,7 +279,7 @@ def evaluate_embeddings(embeddings, edges):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
-    parser.add_argument('--mode', default='fit', help='random|degrees|fit')
+    parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees')
     parser.add_argument('-p', '--plot', action='store_true', help='plot visualization')
 
     args = parser.parse_args()

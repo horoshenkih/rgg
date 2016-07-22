@@ -54,7 +54,7 @@ class HypRG:
 
     def generate_vertices(self):
         # angle is uniform in [0, 2 * pi)
-        # radius has density alpha * sinh(alpha * R) / (cosh(alpha * R) - 1)
+        # radius has density alpha * sinh(alpha * r) / (cosh(alpha * R) - 1)
         r = self.radius_distribution(size=self.n)
         phi = self.angle_distribution(size=self.n)
         return zip(r, phi)

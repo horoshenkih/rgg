@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from graph import HypRG
 
 def main():
-    parser = ArgumentParser(description='Emulape hyperbolic random graph', epilog='Returns only edges (without isolated vertices!)')
+    parser = ArgumentParser(description='Emulate hyperbolic random graph', epilog='Returns only edges (without isolated vertices!)')
     parser.add_argument('n', type=int, help='number of vertices')
     parser.add_argument('--alpha', type=float, help='alpha', default=1.)
     parser.add_argument('-C', type=float, help='C', default=0.)
