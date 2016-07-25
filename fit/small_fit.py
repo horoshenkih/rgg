@@ -176,10 +176,11 @@ def find_embeddings(vertices, edges, mode):
             random.shuffle(a)
             nedges = set(a[:len(edges)])
         elif mode == 'fit_degrees':
+            print "mode: fit_degrees"
             K = 2.  # ratio of nedges to second neighbour
             L = 1.  # ratio of nedges between first neighbours
             M = 1.  # ratio of random nedges
-            free_nedges = all_nedges.copy()
+            #free_nedges = all_nedges.copy()
 
             G = nx.Graph()
             G.add_edges_from(edges)
@@ -193,17 +194,20 @@ def find_embeddings(vertices, edges, mode):
                     second_neigh.update(G.neighbors(neigh))
                 second_neigh.remove(v)
 
+                n_vertex_nedges = 0
                 # from v to second neighbours
                 for i, sec_n in enumerate(second_neigh):
                     #print "i: {}".format(i)
                     if i+1 > degrees[v] * K:
                         continue
-                    if (v, sec_n) in free_nedges or (sec_n, v) in free_nedges:
+                    #if (v, sec_n) in free_nedges or (sec_n, v) in free_nedges:
+                    if (v, sec_n) not in nedges and (sec_n, v) not in nedges:
                         nedges.add((v, sec_n))
-                        try:
-                            free_nedges.remove((v, sec_n))
-                        except KeyError:
-                            free_nedges.remove((sec_n, v))
+                        n_vertex_nedges += 1
+                        #try:
+                        #    free_nedges.remove((v, sec_n))
+                        #except KeyError:
+                        #    free_nedges.remove((sec_n, v))
 
                 # between first neighbours
                 for j, pair in enumerate(combinations(first_neigh, 2)):
@@ -211,19 +215,22 @@ def find_embeddings(vertices, edges, mode):
                     if j+1 > degrees[v] * L:
                         continue
                     v1, v2 = pair
-                    if (v1, v2) in free_nedges or (v2, v1) in free_nedges:
+                    #if (v1, v2) in free_nedges or (v2, v1) in free_nedges:
+                    if (v1, v2) not in nedges and (v2, v1) not in nedges:
                         nedges.add((v1, v2))
-                        try:
-                            free_nedges.remove((v1, v2))
-                        except KeyError:
-                            free_nedges.remove((v2, v1))
+                        #try:
+                        #    free_nedges.remove((v1, v2))
+                        #except KeyError:
+                        #    free_nedges.remove((v2, v1))
 
                 # random edges
-                a = list(free_nedges)
-                random.shuffle(a)
-                random_to_update = set(a[:int(degrees[v]*M)])
-                nedges.update(random_to_update)
-                free_nedges.difference_update(random_to_update)
+                #n_random_vertices = int(degrees[v]*M)
+                #n_free_vertex_nedges = (n-1) - n_vertex_nedges
+                #a = list(free_nedges)
+                #random.shuffle(a)
+                #random_to_update = set(a[:int(degrees[v]*M)])
+                #nedges.update(random_to_update)
+                #free_nedges.difference_update(random_to_update)
             print "fit_degrees: number of nedges={}".format(len(nedges))
         else:
             nedges = all_nedges.copy()
