@@ -185,6 +185,8 @@ def find_embeddings(vertices, edges, mode):
             G = nx.Graph()
             G.add_edges_from(edges)
             srt_vertices = sorted(degrees.keys(), key=lambda v: -degrees[v])
+            shuf_vertices = srt_vertices[:]
+            random.shuffle(shuf_vertices)
             for v in srt_vertices:
                 # get first neighbours
                 first_neigh = set(G.neighbors(v))
@@ -224,20 +226,22 @@ def find_embeddings(vertices, edges, mode):
                         #    free_nedges.remove((v2, v1))
 
                 # random edges
-                #n_random_vertices = int(degrees[v]*M)
-                #n_free_vertex_nedges = (n-1) - n_vertex_nedges
-                #a = list(free_nedges)
-                #random.shuffle(a)
-                #random_to_update = set(a[:int(degrees[v]*M)])
-                #nedges.update(random_to_update)
-                #free_nedges.difference_update(random_to_update)
+                max_n_random_vertices = int(degrees[v]*M)
+                n_random_vertices = 0
+                for rand_v in shuf_vertices:
+                    if n_random_vertices >= max_n_random_vertices:
+                        break
+                    if (v, rand_v) not in nedges and (rand_v, v) not in nedges \
+                       and (v, rand_v) not in edges and (rand_v, v) not in edges:
+                        nedges.add((v, rand_v))
+                        n_random_vertices += 1
             print "fit_degrees: number of nedges={}".format(len(nedges))
         else:
             nedges = all_nedges.copy()
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
         print "Check gradient: ", check_grad(q, grad_q, x0)
-        res = minimize(q, x0, method='BFGS', jac=grad_q)
+        res = minimize(q, x0, method='BFGS', jac=grad_q, options={'maxiter': 3})
         #print res
         retval = {}
         for i in range(len(vertices)):
@@ -257,7 +261,7 @@ def evaluate_embeddings(embeddings, edges):
 
     report = defaultdict(int)
     # contingency matrix
-    if os.environ['DEBUG']:
+    if 'DEBUG' in os.environ:
         print "DEBUG: evaluate contingency matrix"
     for v1, v2 in combinations(embeddings.keys(), 2):
         is_true_edge = (v1, v2) in edges or (v2, v1) in edges
@@ -274,7 +278,7 @@ def evaluate_embeddings(embeddings, edges):
                 report['true_negative'] += 1
 
     # vertexwise ROC-AUC
-    if os.environ['DEBUG']:
+    if 'DEBUG' in os.environ:
         print "DEBUG: evaluate vertexwise AUC"
     all_vertex_aucs = []
     for i_v1, v1 in enumerate(embeddings.keys()):
