@@ -241,7 +241,7 @@ def find_embeddings(vertices, edges, mode):
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
         print "Check gradient: ", check_grad(q, grad_q, x0)
-        res = minimize(q, x0, method='BFGS', jac=grad_q, options={'maxiter': 3})
+        res = minimize(q, x0, method='BFGS', jac=grad_q)
         #print res
         retval = {}
         for i in range(len(vertices)):
