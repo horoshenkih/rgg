@@ -14,7 +14,7 @@ def cosh_d(v1, v2):
     r1, phi1 = v1
     r2, phi2 = v2
 
-    return np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
+    return max(1., np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2))  # Python precision issues
 
 def grad_cosh_d(v1, v2):
     r1, phi1 = v1
@@ -28,19 +28,22 @@ def grad_cosh_d(v1, v2):
     return np.array((ddr1, ddphi1, ddr2, ddphi2))
 
 class Margin:
-    "difference between log cosh(distance) and log cosh(R)"
+    "difference between distance and R"
     def __init__(self, R):
+        self.R = R
         self.coshR = np.cosh(R)
     def __call__(self, r1, phi1, r2, phi2):
         cd = cosh_d((r1, phi1), (r2, phi2))
-        return np.log(cd / self.coshR)
+        return np.arccosh(cd) - self.R
 
 class GradMargin(Margin):
     "gradient of margin wrt r1, phi1, r2, phi2"
     def __call__(self, r1, phi1, r2, phi2):
         cd = cosh_d((r1, phi1), (r2, phi2))
+        if abs(cd - 1.) < 1e-15:
+            return np.array((0.,0.,0.,0.))
         grad_cd = grad_cosh_d((r1, phi1), (r2, phi2))
-        return grad_cd / cd
+        return grad_cd / np.sqrt(cd - 1) / np.sqrt(cd + 1)
 
 class Smooth:
     "approximation of step function of margin"
