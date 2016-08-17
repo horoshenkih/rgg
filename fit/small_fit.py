@@ -10,6 +10,9 @@ from scipy.optimize import minimize, check_grad
 import networkx as nx
 from sklearn.metrics import roc_auc_score
 
+def make_edge(v1, v2):
+    return tuple(sorted((v1, v2)))
+
 def cosh_d(v1, v2):
     r1, phi1 = v1
     r2, phi2 = v2
@@ -68,7 +71,6 @@ class Q:
         assert n > 1
         R = 2 * np.log(n)
         self.coshR = np.cosh(R)
-        #self.non_edge_weight = 2. * len(self.edges) / n / (n-1)
         self.non_edge_weight = float(len(self.edges)) / len(self.nedges) if len(self.nedges) else 1.
 
         self.margin = Margin(R)
@@ -171,8 +173,10 @@ def find_embeddings(vertices, edges, mode):
         nedges = set()
         all_nedges = set()
         for (v1, v2) in combinations(vertices, 2):
-            if (v1, v2) not in edges and (v2, v1) not in edges:
-                all_nedges.add((v1, v2))
+            #if (v1, v2) not in edges and (v2, v1) not in edges:
+            e = make_edge(v1, v2)
+            if e not in edges:
+                all_nedges.add(e)
 
         if mode == 'fit_random':
             a = list(all_nedges)
@@ -205,14 +209,10 @@ def find_embeddings(vertices, edges, mode):
                     #print "i: {}".format(i)
                     if i+1 > degrees[v] * K:
                         continue
-                    #if (v, sec_n) in free_nedges or (sec_n, v) in free_nedges:
-                    if (v, sec_n) not in nedges and (sec_n, v) not in nedges:
-                        nedges.add((v, sec_n))
+                    e = make_edge(v, sec_n)
+                    if e not in nedges:
+                        nedges.add(e)
                         n_vertex_nedges += 1
-                        #try:
-                        #    free_nedges.remove((v, sec_n))
-                        #except KeyError:
-                        #    free_nedges.remove((sec_n, v))
 
                 # between first neighbours
                 for j, pair in enumerate(combinations(first_neigh, 2)):
@@ -220,13 +220,9 @@ def find_embeddings(vertices, edges, mode):
                     if j+1 > degrees[v] * L:
                         continue
                     v1, v2 = pair
-                    #if (v1, v2) in free_nedges or (v2, v1) in free_nedges:
-                    if (v1, v2) not in nedges and (v2, v1) not in nedges:
-                        nedges.add((v1, v2))
-                        #try:
-                        #    free_nedges.remove((v1, v2))
-                        #except KeyError:
-                        #    free_nedges.remove((v2, v1))
+                    e = make_edge(v1, v2)
+                    if w not in nedges:
+                        nedges.add(e)
 
                 # random edges
                 max_n_random_vertices = int(degrees[v]*M)
@@ -234,9 +230,9 @@ def find_embeddings(vertices, edges, mode):
                 for rand_v in shuf_vertices:
                     if n_random_vertices >= max_n_random_vertices:
                         break
-                    if (v, rand_v) not in nedges and (rand_v, v) not in nedges \
-                       and (v, rand_v) not in edges and (rand_v, v) not in edges:
-                        nedges.add((v, rand_v))
+                    e = make_edge(v, rand_v)
+                    if e not in nedges and e not in edges:
+                        nedges.add(e)
                         n_random_vertices += 1
             print "fit_degrees: number of nedges={}".format(len(nedges))
         else:
@@ -267,7 +263,7 @@ def evaluate_embeddings(embeddings, edges):
     if 'DEBUG' in os.environ:
         print "DEBUG: evaluate contingency matrix"
     for v1, v2 in combinations(embeddings.keys(), 2):
-        is_true_edge = (v1, v2) in edges or (v2, v1) in edges
+        is_true_edge = make_edge(v1, v2) in edges
         is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2]) <= coshR
         if is_true_edge:
             if is_predicted_edge:
@@ -288,7 +284,7 @@ def evaluate_embeddings(embeddings, edges):
         true = []
         predicted = []
         for v2 in embeddings.keys():
-            is_true_edge = (v1, v2) in edges or (v2, v1) in edges
+            is_true_edge = make_edge(v1, v2) in edges
             is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2])
             true.append(is_true_edge)
             predicted.append(-is_predicted_edge)
@@ -310,7 +306,7 @@ def main():
         for line in f:
             v1, v2 = line.rstrip().split()
             vertices.update((v1, v2))
-            edges.add((v1, v2))
+            edges.add(make_edge(v1, v2))
     n = len(vertices)
     print "Number of vertices: {}".format(n)
     print "Number of edges: {}".format(len(edges))
