@@ -9,15 +9,19 @@ import numpy as np
 from scipy.optimize import minimize, check_grad
 import networkx as nx
 from sklearn.metrics import roc_auc_score
+from sklearn.neighbors import BallTree, DistanceMetric
 
 def make_edge(v1, v2):
     return tuple(sorted((v1, v2)))
 
 def cosh_d(v1, v2):
-    r1, phi1 = v1
-    r2, phi2 = v2
+    r1, phi1 = list(v1)[:2]
+    r2, phi2 = list(v2)[:2]
 
     return max(1., np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2))  # Python precision issues
+
+def distance(v1, v2):
+    return np.arccosh(cosh_d(v1, v2))
 
 def grad_cosh_d(v1, v2):
     r1, phi1 = v1
@@ -258,27 +262,28 @@ def evaluate_embeddings(embeddings, edges):
     R = 2 * np.log(n)
     coshR = np.cosh(R)
 
+    # use BallTree for efficient graph construction
+    vertices = sorted(embeddings.keys())
+    embeddings_array = np.array([embeddings[v] for v in vertices])
+    bt = BallTree(embeddings_array, metric=distance)
+
+    predicted_edges = set()
+    for v in embeddings.keys():
+        coords = embeddings[v]
+        neigh_idx = bt.query_radius(coords, R)
+        neigh = [vertices[i] for i in neigh_idx[0].tolist() if vertices[i] != v]
+        predicted_edges.update([make_edge(v, ne) for ne in neigh])
+
     report = defaultdict(int)
+
     # contingency matrix
-    if 'DEBUG' in os.environ:
-        print "DEBUG: evaluate contingency matrix"
-    for v1, v2 in combinations(embeddings.keys(), 2):
-        is_true_edge = make_edge(v1, v2) in edges
-        is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2]) <= coshR
-        if is_true_edge:
-            if is_predicted_edge:
-                report['true_positive'] += 1
-            else:
-                report['false_negative'] += 1
-        else:
-            if is_predicted_edge:
-                report['false_positive'] += 1
-            else:
-                report['true_negative'] += 1
+    report['true_positive'] = len(edges & predicted_edges)
+    report['false_positive'] = len(predicted_edges - edges)
+    report['false_negative'] = len(edges - predicted_edges)
+    report['true_negative'] = n*(n-1)/2 - len(edges | predicted_edges)
 
     # vertexwise ROC-AUC
-    if 'DEBUG' in os.environ:
-        print "DEBUG: evaluate vertexwise AUC"
+    '''
     all_vertex_aucs = []
     for i_v1, v1 in enumerate(embeddings.keys()):
         true = []
@@ -291,6 +296,7 @@ def evaluate_embeddings(embeddings, edges):
         auc = roc_auc_score(true, predicted)
         all_vertex_aucs.append(auc)
     report['vertexwise_auc'] = np.mean(all_vertex_aucs)
+    '''
     return report
 
 def main():
