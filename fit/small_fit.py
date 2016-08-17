@@ -258,9 +258,14 @@ def find_embeddings(vertices, edges, mode):
 
 def evaluate_embeddings(embeddings, edges):
     "evaluate quality of embeddings compared with real elge set"
+    report = []
+
     n = len(embeddings.keys())
     R = 2 * np.log(n)
     coshR = np.cosh(R)
+
+    #true_graph = nx.Graph()
+    #true_graph.add_edges_from(edges)
 
     # use BallTree for efficient graph construction
     vertices = sorted(embeddings.keys())
@@ -273,30 +278,31 @@ def evaluate_embeddings(embeddings, edges):
         neigh_idx = bt.query_radius(coords, R)
         neigh = [vertices[i] for i in neigh_idx[0].tolist() if vertices[i] != v]
         predicted_edges.update([make_edge(v, ne) for ne in neigh])
-
-    report = defaultdict(int)
+    report.append(['total_predicted_edges', len(predicted_edges)])
 
     # contingency matrix
-    report['true_positive'] = len(edges & predicted_edges)
-    report['false_positive'] = len(predicted_edges - edges)
-    report['false_negative'] = len(edges - predicted_edges)
-    report['true_negative'] = n*(n-1)/2 - len(edges | predicted_edges)
+    report.append(['true positive', len(edges & predicted_edges)])
+    report.append(['false positive', len(predicted_edges - edges)])
+    report.append(['false negative', len(edges - predicted_edges)])
+    report.append(['true negative', n*(n-1)/2 - len(edges | predicted_edges)])
 
-    # vertexwise ROC-AUC
-    '''
-    all_vertex_aucs = []
-    for i_v1, v1 in enumerate(embeddings.keys()):
-        true = []
-        predicted = []
-        for v2 in embeddings.keys():
-            is_true_edge = make_edge(v1, v2) in edges
-            is_predicted_edge = cosh_d(embeddings[v1], embeddings[v2])
-            true.append(is_true_edge)
-            predicted.append(-is_predicted_edge)
-        auc = roc_auc_score(true, predicted)
-        all_vertex_aucs.append(auc)
-    report['vertexwise_auc'] = np.mean(all_vertex_aucs)
-    '''
+    degrees = defaultdict(int)
+    for v1, v2 in edges:
+        degrees[v1] += 1
+        degrees[v2] += 1
+
+    # compute number of correct DIRECTED arcs assuming that degrees are known
+    # TODO the same for non-edges
+    all_correct_arcs = set()
+    for v in vertices:
+        degree = degrees[v]
+        dist, ind = bt.query(embeddings[v], k=degree+1)  # one of neighbors is vertex inself
+        neigh = [vertices[i] for i in ind[0].tolist() if vertices[i] != v]
+        for ne in neigh:
+            if make_edge(v, ne) in edges:
+                all_correct_arcs.add((v, ne))
+    report.append(['ratio of correct arcs for known degrees', float(len(all_correct_arcs)) / (2 * len(edges))])
+
     return report
 
 def main():
@@ -324,8 +330,8 @@ def main():
     report = evaluate_embeddings(embeddings, edges)
 
     print 'report'
-    for k in sorted(report.keys()):
-        print '{}: {}'.format(k, report[k])
+    for name, value in report:
+        print '{}: {}'.format(name, value)
     if args.plot:
         import matplotlib.pyplot as plt
         # vertices
