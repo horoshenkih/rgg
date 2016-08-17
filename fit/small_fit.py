@@ -225,7 +225,7 @@ def find_embeddings(vertices, edges, mode):
                         continue
                     v1, v2 = pair
                     e = make_edge(v1, v2)
-                    if w not in nedges:
+                    if e not in nedges:
                         nedges.add(e)
 
                 # random edges
