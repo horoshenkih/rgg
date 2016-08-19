@@ -6,10 +6,12 @@ import os
 
 import random
 import numpy as np
+
 from scipy.optimize import minimize, check_grad
+
 import networkx as nx
-from sklearn.metrics import roc_auc_score
-from sklearn.neighbors import BallTree, DistanceMetric
+
+from sklearn.neighbors import BallTree
 
 def make_edge(v1, v2):
     return tuple(sorted((v1, v2)))
@@ -53,17 +55,18 @@ class GradMargin(Margin):
         return grad_cd / np.sqrt(cd - 1) / np.sqrt(cd + 1)
 
 class Smooth:
-    "approximation of step function of margin"
-    def __init__(self, scale=1., height=1.):
+    """approximation of step function of margin
+    also, model of edge probability"""
+    def __init__(self, beta=1., height=1.):
         self.height = height
-        self.scale = scale
+        self.beta = beta
     def __call__(self, margin):
-        return 1 / (1. + np.exp(margin * self.scale)) * self.height
+        return 1 / (1. + np.exp(margin * self.beta)) * self.height
 
 class GradSmooth(Smooth):
     "gradient of step function approximation wrt margin"
     def __call__(self, margin):
-        return -np.exp(margin * self.scale) / (1. + np.exp(margin * self.scale))**2 * self.height * self.scale
+        return -np.exp(margin * self.beta) / (1. + np.exp(margin * self.beta))**2 * self.height * self.beta
 
 class Q:
     "loss function to minimize"
@@ -80,9 +83,9 @@ class Q:
         self.margin = Margin(R)
         self.grad_margin = GradMargin(R)
 
-        smooth_scale = 1.
-        self.smooth = Smooth(scale=smooth_scale)
-        self.grad_smooth = GradSmooth(scale=smooth_scale)
+        beta = 1.
+        self.smooth = Smooth(beta=beta)
+        self.grad_smooth = GradSmooth(beta=beta)
 
     def __value_term(self, x, v1, v2, true_edge):
         i1 = self.vertices.index(v1)
@@ -145,6 +148,20 @@ class GradQ(Q):
             value[2*i1+1] += v[1]  # phi1
             value[2*i2]   += v[2]  # r2
             value[2*i2+1] += v[3]  # phi2
+        return value
+
+    def vertex_pair_grad(self, x, v1, v2, is_true_edge):
+        assert len(x) % 2 == 0
+
+        value = np.zeros(len(x))
+        i1 = self.vertices.index(v1)
+        i2 = self.vertices.index(v2)
+        edge_ind = 1. if is_true_edge else 0.
+        v = self.__grad_terms(x, i1, i2, edge_ind)
+        value[2*i1]   = v[0]  # r1
+        value[2*i1+1] = v[1]  # phi1
+        value[2*i2]   = v[2]  # r2
+        value[2*i2+1] = v[3]  # phi2
         return value
 
 def find_embeddings(vertices, edges, mode):
@@ -243,13 +260,24 @@ def find_embeddings(vertices, edges, mode):
             nedges = all_nedges.copy()
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
-        print "Check gradient: ", check_grad(q, grad_q, x0)
-        res = minimize(q, x0, method='BFGS', jac=grad_q)
-        #print res
+        if mode == 'fit_degrees_sgd':
+            x = x0
+            n_epoch = 100
+            l = 0.05
+            triples = [(v1, v2, True) for v1, v2 in edges] + [(v1, v2, False) for v1, v2 in nedges]
+            random.shuffle(triples)
+            for epoch in range(n_epoch):
+                for v1, v2, is_true_edge in triples:
+                    x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * l
+        else:
+            print "Check gradient: ", check_grad(q, grad_q, x0)
+            res = minimize(q, x0, method='BFGS', jac=grad_q)
+            #print res
+            x = res.x
         retval = {}
         for i in range(len(vertices)):
-            r = res.x[2*i]
-            phi = res.x[2*i+1]
+            r = x[2*i]
+            phi = x[2*i+1]
             retval[vertices[i]] = (r, phi)
 
         return retval
