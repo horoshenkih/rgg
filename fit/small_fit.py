@@ -164,12 +164,15 @@ class GradQ(Q):
         value[2*i2+1] = v[3]  # phi2
         return value
 
-def find_embeddings(vertices, edges, mode):
+def find_embeddings(vertices, edges, mode,
+    learning_rate=0.1, n_epoch=100,
+    ratio_to_second=2., ratio_between_first=1., ratio_random=1.):
     "find (r, phi) for each vertex"
     vertices = list(vertices)
     n = len(vertices)
     R = 2 * np.log(n)
 
+    print "mode: {}".format(mode)
     np.random.seed(0)
     degrees = defaultdict(int)
     print "count degrees"
@@ -177,11 +180,9 @@ def find_embeddings(vertices, edges, mode):
         degrees[v1] += 1
         degrees[v2] += 1
     if mode=='random':
-        print "mode: random"
         # phi=rand(0, 2pi), r = rand(0,R)
         return {v: (np.random.uniform(0.0, R), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode == 'degrees':
-        print "mode: degrees"
         # phi=rand(0,2pi), r = 2log(n/k)
         return {v: (2*np.log(n / degrees[v]), np.random.uniform(0.0, 2*np.pi)) for v in vertices}
     elif mode.startswith('fit'):
@@ -203,11 +204,10 @@ def find_embeddings(vertices, edges, mode):
             a = list(all_nedges)
             random.shuffle(a)
             nedges = set(a[:len(edges)])
-        elif mode == 'fit_degrees':
-            print "mode: fit_degrees"
-            K = 2.  # ratio of nedges to second neighbour
-            L = 1.  # ratio of nedges between first neighbours
-            M = 1.  # ratio of random nedges
+        elif mode.startswith('fit_degrees'):
+            K = float(ratio_to_second)      # ratio of nedges to second neighbour
+            L = float(ratio_between_first)  # ratio of nedges between first neighbours
+            M = float(ratio_random)         # ratio of random nedges
             #free_nedges = all_nedges.copy()
 
             G = nx.Graph()
@@ -255,20 +255,18 @@ def find_embeddings(vertices, edges, mode):
                     if e not in nedges and e not in edges:
                         nedges.add(e)
                         n_random_vertices += 1
-            print "fit_degrees: number of nedges={}".format(len(nedges))
         else:
             nedges = all_nedges.copy()
+        print "number of nedges={}".format(len(nedges))
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
         if mode == 'fit_degrees_sgd':
             x = x0
-            n_epoch = 100
-            l = 0.05
             triples = [(v1, v2, True) for v1, v2 in edges] + [(v1, v2, False) for v1, v2 in nedges]
             random.shuffle(triples)
             for epoch in range(n_epoch):
                 for v1, v2, is_true_edge in triples:
-                    x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * l
+                    x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * learning_rate
         else:
             print "Check gradient: ", check_grad(q, grad_q, x0)
             res = minimize(q, x0, method='BFGS', jac=grad_q)
@@ -336,8 +334,13 @@ def evaluate_embeddings(embeddings, edges):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
-    parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees')
+    parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
     parser.add_argument('-p', '--plot', action='store_true', help='plot visualization')
+    parser.add_argument('--learning_rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
+    parser.add_argument('--n_epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
+    parser.add_argument('--ratio_to_second', default=2., help='ratio of nedges to second neighbour', type=float)
+    parser.add_argument('--ratio_between_first', default=1., help='ratio of nedges between first neighbours', type=float)
+    parser.add_argument('--ratio_random', default=1., help='ratio of random nedges', type=float)
 
     args = parser.parse_args()
     vertices = set()
@@ -353,7 +356,10 @@ def main():
     print "Number of non-edges: {}".format(n*(n-1)/2 - len(edges))
 
     print "Find embeddings"
-    embeddings = find_embeddings(vertices, edges, mode=args.mode)
+    embeddings = find_embeddings(vertices, edges, mode=args.mode,
+        learning_rate=args.learning_rate, n_epoch=args.n_epoch,
+        ratio_to_second=args.ratio_to_second, ratio_between_first=args.ratio_between_first, ratio_random=args.ratio_random
+    )
     print "Evaluate embeddings"
     report = evaluate_embeddings(embeddings, edges)
 
