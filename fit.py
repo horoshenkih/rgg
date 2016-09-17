@@ -263,11 +263,15 @@ def find_embeddings(vertices, edges, mode,
         q = Q(vertices, edges, nedges)
         grad_q = GradQ(vertices, edges, nedges)
         if mode == 'fit_degrees_sgd':
+            print "Learning rate: {}".format(learning_rate)
+            print "Ratio to second: {}".format(ratio_to_second)
+            print "Ratio between first: {}".format(ratio_between_first)
+            print "Ratio random: {}".format(ratio_random)
             x = x0
             triples = [(v1, v2, True) for v1, v2 in edges] + [(v1, v2, False) for v1, v2 in nedges]
             random.shuffle(triples)
             for epoch in range(n_epoch):
-                print "Epoch {} ...".format(epoch+1)
+                print "Epoch {} / {} ...".format(epoch+1, n_epoch)
                 start = time.time()
                 for v1, v2, is_true_edge in triples:
                     x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * learning_rate
