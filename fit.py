@@ -13,30 +13,7 @@ from scipy.optimize import minimize, check_grad
 
 import networkx as nx
 
-from sklearn.neighbors import BallTree
-
-def make_edge(v1, v2):
-    return tuple(sorted((v1, v2)))
-
-def cosh_d(v1, v2):
-    r1, phi1 = list(v1)[:2]
-    r2, phi2 = list(v2)[:2]
-
-    return max(1., np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2))  # Python precision issues
-
-def distance(v1, v2):
-    return np.arccosh(cosh_d(v1, v2))
-
-def grad_cosh_d(v1, v2):
-    r1, phi1 = v1
-    r2, phi2 = v2
-
-    ddr1 = np.sinh(r1) * np.cosh(r2) - np.cosh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
-    ddr2 = np.cosh(r1) * np.sinh(r2) - np.sinh(r1) * np.cosh(r2) * np.cos(phi1 - phi2)
-    ddphi1 = np.sinh(r1) * np.sinh(r2) * np.sin(phi1 - phi2)
-    ddphi2 = -ddphi1
-
-    return np.array((ddr1, ddphi1, ddr2, ddphi2))
+from graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
 
 class Margin:
     "difference between distance and R"
@@ -292,64 +269,11 @@ def find_embeddings(vertices, edges, mode,
     else:
         raise Exception('unknown mode')
 
-def evaluate_embeddings(embeddings, edges):
-    "evaluate quality of embeddings compared with real elge set"
-    report = []
-
-    n = len(embeddings.keys())
-    R = 2 * np.log(n)
-    coshR = np.cosh(R)
-
-    #true_graph = nx.Graph()
-    #true_graph.add_edges_from(edges)
-
-    # use BallTree for efficient graph construction
-    print "construct BallTree"
-    vertices = sorted(embeddings.keys())
-    embeddings_array = np.array([embeddings[v] for v in vertices])
-    bt = BallTree(embeddings_array, metric=distance)
-
-    predicted_edges = set()
-    print "predict edges"
-    for v in embeddings.keys():
-        coords = embeddings[v]
-        neigh_idx = bt.query_radius(coords, R)
-        neigh = [vertices[i] for i in neigh_idx[0].tolist() if vertices[i] != v]
-        predicted_edges.update([make_edge(v, ne) for ne in neigh])
-    report.append(['total_predicted_edges', len(predicted_edges)])
-
-    # contingency matrix
-    print "compute contingency matrix"
-    report.append(['true positive', len(edges & predicted_edges)])
-    report.append(['false positive', len(predicted_edges - edges)])
-    report.append(['false negative', len(edges - predicted_edges)])
-    report.append(['true negative', n*(n-1)/2 - len(edges | predicted_edges)])
-
-    degrees = defaultdict(int)
-    print "compute number of correct directed arcs"
-    for v1, v2 in edges:
-        degrees[v1] += 1
-        degrees[v2] += 1
-
-    # compute number of correct DIRECTED arcs assuming that degrees are known
-    # TODO the same for non-edges
-    all_correct_arcs = set()
-    for v in vertices:
-        degree = degrees[v]
-        dist, ind = bt.query(embeddings[v], k=degree+1)  # one of neighbors is vertex inself
-        neigh = [vertices[i] for i in ind[0].tolist() if vertices[i] != v]
-        for ne in neigh:
-            if make_edge(v, ne) in edges:
-                all_correct_arcs.add((v, ne))
-    report.append(['ratio of correct arcs for known degrees', float(len(all_correct_arcs)) / (2 * len(edges))])
-
-    return report
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
+    parser.add_argument('embeddings_outfile')
     parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
-    parser.add_argument('-p', '--plot', action='store_true', help='plot visualization')
     parser.add_argument('--learning_rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
     parser.add_argument('--n_epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
     parser.add_argument('--ratio_to_second', default=2., help='ratio of nedges to second neighbour', type=float)
@@ -357,13 +281,7 @@ def main():
     parser.add_argument('--ratio_random', default=1., help='ratio of random nedges', type=float)
 
     args = parser.parse_args()
-    vertices = set()
-    edges = set()
-    with open(args.graph_file, 'r') as f:
-        for line in f:
-            v1, v2 = line.rstrip().split()
-            vertices.update((v1, v2))
-            edges.add(make_edge(v1, v2))
+    vertices, edges = read_graph_from_file(args.graph_file)
     n = len(vertices)
     print "Number of vertices: {}".format(n)
     print "Number of edges: {}".format(len(edges))
@@ -374,27 +292,11 @@ def main():
         learning_rate=args.learning_rate, n_epoch=args.n_epoch,
         ratio_to_second=args.ratio_to_second, ratio_between_first=args.ratio_between_first, ratio_random=args.ratio_random
     )
-    print "Evaluate embeddings"
-    report = evaluate_embeddings(embeddings, edges)
 
-    print 'report'
-    for name, value in report:
-        print '{}: {}'.format(name, value)
-    if args.plot:
-        import matplotlib.pyplot as plt
-        # vertices
-        r, phi = zip(*embeddings.values())
-        ax = plt.subplot(111, projection='polar')
-        ax.plot(phi, r, marker='o', linewidth=0)
-
-        # edges
-        '''
-        for (v1, v2) in graph.edges():
-            r1, phi1 = v1
-            r2, phi2 = v2
-            ax.plot((phi1, phi2), (r1, r2), color='g')
-        '''
-        plt.show()
+    with open(args.embeddings_outfile, 'w') as of:
+        for v in embeddings.keys():
+            r, phi = embeddings[v]
+            of.write(' '.join(map(str, [v, r, phi]))+'\n')
 
 if __name__ == '__main__':
     main()

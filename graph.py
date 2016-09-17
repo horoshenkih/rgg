@@ -135,3 +135,45 @@ class RGG:
         self.bbox[1] = max(self.bbox[1], new_bounds[1])
         return coord
 
+def cosh_d(v1, v2):
+    r1, phi1 = list(v1)[:2]
+    r2, phi2 = list(v2)[:2]
+
+    return max(1., np.cosh(r1) * np.cosh(r2) - np.sinh(r1) * np.sinh(r2) * np.cos(phi1 - phi2))  # Python precision issues
+
+def distance(v1, v2):
+    return np.arccosh(cosh_d(v1, v2))
+
+def grad_cosh_d(v1, v2):
+    r1, phi1 = v1
+    r2, phi2 = v2
+
+    ddr1 = np.sinh(r1) * np.cosh(r2) - np.cosh(r1) * np.sinh(r2) * np.cos(phi1 - phi2)
+    ddr2 = np.cosh(r1) * np.sinh(r2) - np.sinh(r1) * np.cosh(r2) * np.cos(phi1 - phi2)
+    ddphi1 = np.sinh(r1) * np.sinh(r2) * np.sin(phi1 - phi2)
+    ddphi2 = -ddphi1
+
+    return np.array((ddr1, ddphi1, ddr2, ddphi2))
+
+def make_edge(v1, v2):
+    return tuple(sorted((v1, v2)))
+
+def read_graph_from_file(filename):
+    with open(filename, 'r') as f:
+        edges = set()
+        vertices = set()
+        for line in f:
+            v1, v2 = line.rstrip().split()
+            vertices.update((v1, v2))
+            edges.add(make_edge(v1, v2))
+        return vertices, edges
+
+def read_embeddings_from_file(filename):
+    with open(filename, 'r') as f:
+        embeddings = dict()
+        for line in f:
+            v, r, phi = line.rstrip().split()
+            r = float(r)
+            phi = float(phi)
+            embeddings[v] = (r, phi)
+        return embeddings
