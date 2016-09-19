@@ -13,7 +13,7 @@ from scipy.optimize import minimize, check_grad
 
 import networkx as nx
 
-from graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
+from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
 
 class Margin:
     "difference between distance and R"
@@ -56,6 +56,7 @@ class Q:
         n = len(vertices)
         assert n > 1
         R = 2 * np.log(n)
+        self.R = R
         self.coshR = np.cosh(R)
         self.non_edge_weight = float(len(self.edges)) / len(self.nedges) if len(self.nedges) else 1.
 

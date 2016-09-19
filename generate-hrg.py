@@ -6,7 +6,7 @@ from collections import Counter
 
 import matplotlib.pyplot as plt
 
-from graph import HypRG
+from lib.graph import HypRG
 
 def main():
     parser = ArgumentParser(description='Emulate hyperbolic random graph', epilog='Returns only edges (without isolated vertices!)')

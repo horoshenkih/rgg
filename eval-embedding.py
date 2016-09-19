@@ -5,7 +5,7 @@ from collections import defaultdict
 import numpy as np
 from sklearn.neighbors import BallTree
 
-from graph import read_graph_from_file, read_embeddings_from_file, distance, make_edge
+from lib.graph import read_graph_from_file, read_embeddings_from_file, distance, make_edge
 
 def evaluate_embeddings(embeddings, edges):
     "evaluate quality of embeddings compared with real elge set"
