@@ -14,6 +14,7 @@ from scipy.optimize import minimize, check_grad
 import networkx as nx
 
 from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
+from lib.pair_generators import BinaryPairGenerator
 
 class Margin:
     "difference between distance and R"
@@ -184,7 +185,7 @@ def find_embeddings(vertices, edges, mode,
             a = list(all_nedges)
             random.shuffle(a)
             nedges = set(a[:len(edges)])
-        elif mode.startswith('fit_degrees'):
+        elif mode == 'fit_degrees':
             K = float(ratio_to_second)      # ratio of nedges to second neighbour
             L = float(ratio_between_first)  # ratio of nedges between first neighbours
             M = float(ratio_random)         # ratio of random nedges
@@ -246,12 +247,14 @@ def find_embeddings(vertices, edges, mode,
             print "Ratio between first: {}".format(ratio_between_first)
             print "Ratio random: {}".format(ratio_random)
             x = x0
-            triples = [(v1, v2, True) for v1, v2 in edges] + [(v1, v2, False) for v1, v2 in nedges]
-            random.shuffle(triples)
+            G = nx.Graph()
+            G.add_edges_from(edges)
+            pair_generator = BinaryPairGenerator(G)
             for epoch in range(n_epoch):
                 print "Epoch {} / {} ...".format(epoch+1, n_epoch)
                 start = time.time()
-                for v1, v2, is_true_edge in triples:
+                for pair, is_true_edge in pair_generator():
+                    v1, v2 = pair
                     x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * learning_rate
                 finish = time.time()
                 print "Elapsed time: {}s".format(datetime.timedelta(seconds=finish-start))
