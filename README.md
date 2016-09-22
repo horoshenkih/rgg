@@ -11,3 +11,5 @@ Libraries:
 graph.py                TODO refactor
 embedding_models.py     TODO
 loss_functions.py       TODO
+optimization.py         TODO
+pair_generators.py      generate labelled pairs if vertices

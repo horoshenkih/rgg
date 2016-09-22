@@ -155,6 +155,13 @@ def grad_cosh_d(v1, v2):
 
     return np.array((ddr1, ddphi1, ddr2, ddphi2))
 
+def grad_distance(v1, v2):
+    cd = cosh_d(v1, v2)
+    if abs(cd - 1.) < 1e-15:
+        return np.array((0.,0.,0.,0.))
+    grad_cd = grad_cosh_d(v1, v2)
+    return grad_cd / np.sqrt(cd - 1) / np.sqrt(cd + 1)
+
 def make_edge(v1, v2):
     return tuple(sorted((v1, v2)))
 

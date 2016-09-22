@@ -26,8 +26,10 @@ class PairGenerator:
 class BinaryPairGenerator(PairGenerator):
     def __init__(self, graph,
         ratio_to_second=2., ratio_between_first=1., ratio_random=1.,
-        seed=0):
+        batch_size=1, seed=0):
+
         random.seed(seed)
+        self.batch_size = batch_size
         self.graph = graph
         degrees = self._count_degrees(graph.edges())
         srt_vertices = sorted(degrees.keys(), key=lambda v: -degrees[v])
@@ -85,8 +87,11 @@ class BinaryPairGenerator(PairGenerator):
         random.shuffle(self.pairs)
 
     def __call__(self):
-        for e in self.pairs:
-            yield e
+        # split into batches
+        # http://stackoverflow.com/questions/8290397/how-to-split-an-iterable-in-constant-size-chunks
+        l = len(self.pairs)
+        for ndx in xrange(0, l, self.batch_size):
+            yield self.pairs[ndx:min(ndx + self.batch_size, l)]
 
 if __name__ == '__main__':
     edges = [
@@ -95,6 +100,6 @@ if __name__ == '__main__':
     ]
     G = nx.Graph()
     G.add_edges_from(edges)
-    pair_gen = BinaryPairGenerator(G)
-    for e in pair_gen():
-        print e
+    pair_gen = BinaryPairGenerator(G, batch_size=3)
+    for batch in pair_gen():
+        print batch
