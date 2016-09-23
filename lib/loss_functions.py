@@ -24,7 +24,7 @@ class SmoothEdgePredictor:
         p = self.predict(d, r, beta)
         return -np.exp((d - r)*float(beta)) * beta * p**2
 
-    def prediction_gradient_r(self, d, beta):
+    def prediction_gradient_r(self, d, r, beta):
         return -self.prediction_gradient_d(d, r, beta)
 
 class MSE(LossFunction):
@@ -55,6 +55,9 @@ class MSE(LossFunction):
             dp = self.edge_predictor.prediction_gradient_d(d, r, self.beta)
             dd = distance_info['distance_gradients'][e].toarray()[0]
             d_grad = 2. * dd * dp * (p - w) * mult
+            if distance_info['fit_radius']:
+                d_grad[-1] = 2 * self.edge_predictor.prediction_gradient_r(d, r, self.beta) * (p - w) * mult
+
             if grad is None:
                 grad = d_grad
             else:

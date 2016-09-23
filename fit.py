@@ -150,7 +150,8 @@ class GradQ(Q):
 
 def find_embeddings(vertices, edges, mode,
     learning_rate=0.1, n_epoch=100,
-    ratio_to_second=2., ratio_between_first=1., ratio_random=1.):
+    ratio_to_second=2., ratio_between_first=1., ratio_random=1.,
+    silent=False):
     "find (r, phi) for each vertex"
     vertices = list(vertices)
     n = len(vertices)
@@ -253,11 +254,13 @@ def find_embeddings(vertices, edges, mode,
             G = nx.Graph()
             G.add_edges_from(edges)
 
-            embedding_model = PoincareModel(G)
+            embedding_model = PoincareModel(G, fit_radius=True)
+            print "Radius before: {}".format(embedding_model.embedding['radius'])
             pair_generator = BinaryPairGenerator(G, batch_size=1)
             loss_function = MSE(binary_edges=True)
-            optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate)
+            optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate, verbose=not silent)
             optimizer.optimize_embedding(embedding_model, loss_function, pair_generator)
+            print "Radius after: {}".format(embedding_model.embedding['radius'])
 
             return embedding_model.embedding['vertices']
         else:
@@ -279,12 +282,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
     parser.add_argument('embeddings_outfile')
-    parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
+    parser.add_argument('--mode', default='fit_degrees_sgd', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
     parser.add_argument('--learning-rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
     parser.add_argument('--n-epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
     parser.add_argument('--ratio-to-second', default=2., help='ratio of nedges to second neighbour', type=float)
     parser.add_argument('--ratio-between-first', default=1., help='ratio of nedges between first neighbours', type=float)
     parser.add_argument('--ratio-random', default=1., help='ratio of random nedges', type=float)
+    parser.add_argument('--silent', action='store_true')
 
     args = parser.parse_args()
     vertices, edges = read_graph_from_file(args.graph_file)
@@ -296,7 +300,8 @@ def main():
     print "Find embeddings"
     embeddings = find_embeddings(vertices, edges, mode=args.mode,
         learning_rate=args.learning_rate, n_epoch=args.n_epoch,
-        ratio_to_second=args.ratio_to_second, ratio_between_first=args.ratio_between_first, ratio_random=args.ratio_random
+        ratio_to_second=args.ratio_to_second, ratio_between_first=args.ratio_between_first, ratio_random=args.ratio_random,
+        silent=args.silent
     )
 
     with open(args.embeddings_outfile, 'w') as of:

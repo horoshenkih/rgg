@@ -29,10 +29,14 @@ class EmbeddingModel:
         pass
 
 class PoincareModel(EmbeddingModel):
-    def __init__(self, graph, radius=None):
+    def __init__(self, graph, radius=None, fit_radius=False):
         self.graph = graph
         n = self.graph.number_of_nodes()
-        self.__expected_vector_size = 2 * n
+        self.fit_radius = fit_radius
+        if self.fit_radius:
+            self.__expected_vector_size = 2 * n + 1
+        else:
+            self.__expected_vector_size = 2 * n
 
         # initialize embedding
         if radius is None:
@@ -58,23 +62,30 @@ class PoincareModel(EmbeddingModel):
 
     def get_state_vector(self):
         x = np.zeros(self.__expected_vector_size)
+        vertices = self.embedding['vertices']
         for v, i in self._vertex2index.iteritems():
-            r, phi = self.embedding['vertices'][v]
+            r, phi = vertices[v]
             x[2*i] = r
             x[2*i+1] = phi
+        if self.fit_radius:
+            x[-1] = self.embedding['radius']
         return x
 
     def set_state_vector(self, x):
         if x.shape[0] != self.__expected_vector_size:
             raise Exception("Wrong number of elements in vector: {} instead of {}".format(x.shape[0], self.__expected_vector_size))
+        vertices = self.embedding['vertices']
         for v, i in self._vertex2index.iteritems():
             r = x[2*i]
             phi = x[2*i+1]
-            self.embedding['vertices'][v] = (r, phi)
+            vertices[v] = (r, phi)
+        if self.fit_radius:
+            self.embedding['radius'] = x[-1]
 
     def get_distance_info(self, edges_batch):
         distance_info = dict()
         distance_info['radius'] = self.embedding['radius']
+        distance_info['fit_radius'] = self.fit_radius
         distance_info['distances'] = dict()
         distance_info['distance_gradients'] = dict()
 
