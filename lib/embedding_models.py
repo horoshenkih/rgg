@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
+from scipy import sparse
 
 from graph import distance, grad_distance
 
@@ -45,20 +46,28 @@ class PoincareModel(EmbeddingModel):
             r = 2*np.log(float(n) / self.graph.degree(v))
             phi = np.random.uniform(0.0, 2*np.pi)
             self.embedding['vertices'][v] = (r, phi)
+        self._vertex2index = {}
+        for i, v in enumerate(sorted(self.embedding['vertices'])):
+            self._vertex2index[v] = i
+
+    def get_vertex_embedding(self, v):
+        return self.embedding['vertices'][v]
+
+    def __get_vertex_index(self, v):
+        return self._vertex2index[v]
 
     def get_state_vector(self):
-        x = []
-        for v in sorted(self.embedding['vertices'].keys()):
+        x = np.zeros(self.__expected_vector_size)
+        for v, i in self._vertex2index.iteritems():
             r, phi = self.embedding['vertices'][v]
-            x.append(r)
-            x.append(phi)
-
-        return np.array(x)
+            x[2*i] = r
+            x[2*i+1] = phi
+        return x
 
     def set_state_vector(self, x):
         if x.shape[0] != self.__expected_vector_size:
             raise Exception("Wrong number of elements in vector: {} instead of {}".format(x.shape[0], self.__expected_vector_size))
-        for i, v in enumerate(self.embedding['vertices'].keys()):
+        for v, i in self._vertex2index.iteritems():
             r = x[2*i]
             phi = x[2*i+1]
             self.embedding['vertices'][v] = (r, phi)
@@ -69,9 +78,21 @@ class PoincareModel(EmbeddingModel):
         distance_info['distances'] = dict()
         distance_info['distance_gradients'] = dict()
 
-        for edge in edges_batch():
-            distance_info['distances'][edge] = distance(*edge)
-            distance_info['distance_gradients'][edge] = grad_distance(*edge)
+        for edge, w, mult in edges_batch:
+            e_v1, e_v2 = [self.get_vertex_embedding(v) for v in edge]
+            distance_info['distances'][edge] = distance(e_v1, e_v2)
+            # prepare sparse matrix
+            dr1, dphi1, dr2, dphi2 = grad_distance(e_v1, e_v2)
+            v1, v2 = edge
+            x0 = np.zeros(self.__expected_vector_size)
+            i_v1 = self.__get_vertex_index(v1)
+            i_v2 = self.__get_vertex_index(v2)
+            x0[2*i_v1] = dr1
+            x0[2*i_v1+1] = dphi1
+            x0[2*i_v2] = dr2
+            x0[2*i_v2+1] = dphi2
+
+            distance_info['distance_gradients'][edge] = sparse.csr_matrix(x0)
 
         return distance_info
 

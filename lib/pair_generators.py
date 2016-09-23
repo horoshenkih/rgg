@@ -83,15 +83,18 @@ class BinaryPairGenerator(PairGenerator):
                     nedge_set.add(e)
                     n_random_vertices += 1
 
-        self.pairs = [(e, True) for e in edge_set] + [(ne, False) for ne in nedge_set]
-        random.shuffle(self.pairs)
+        non_edge_weight = float(len(edge_set)) / len(nedge_set) if len(nedge_set) else 1.
+        self.vertex_pairs = [(e, True, 1.) for e in edge_set] + [(ne, False, non_edge_weight) for ne in nedge_set]
 
     def __call__(self):
         # split into batches
         # http://stackoverflow.com/questions/8290397/how-to-split-an-iterable-in-constant-size-chunks
-        l = len(self.pairs)
+        l = len(self.vertex_pairs)
         for ndx in xrange(0, l, self.batch_size):
-            yield self.pairs[ndx:min(ndx + self.batch_size, l)]
+            yield self.vertex_pairs[ndx:min(ndx + self.batch_size, l)]
+
+    def shuffle(self):
+        random.shuffle(self.vertex_pairs)
 
 if __name__ == '__main__':
     edges = [

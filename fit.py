@@ -16,6 +16,7 @@ import networkx as nx
 from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
 from lib.pair_generators import BinaryPairGenerator
 from lib.embedding_models import PoincareModel
+from lib.loss_functions import MSE
 
 class Margin:
     "difference between distance and R"
@@ -250,17 +251,20 @@ def find_embeddings(vertices, edges, mode,
             G = nx.Graph()
             G.add_edges_from(edges)
             pair_generator = BinaryPairGenerator(G)
-            embedding_model = PoincareModel()
-            x = x0
+            embedding_model = PoincareModel(G)
+            loss_function = MSE(binary_edges=True)
             for epoch in range(n_epoch):
+                pair_generator.shuffle()
                 print "Epoch {} / {} ...".format(epoch+1, n_epoch)
                 start = time.time()
                 for batch in pair_generator():
-                    pair, is_true_edge = batch[0]
-                    v1, v2 = pair
-                    x -= grad_q.vertex_pair_grad(x, v1, v2, is_true_edge) * learning_rate
+                    x = embedding_model.get_state_vector()
+                    new_grad = loss_function.loss_gradient(batch, embedding_model.get_distance_info(batch))
+                    x -= new_grad * learning_rate
+                    embedding_model.set_state_vector(x)
                 finish = time.time()
                 print "Elapsed time: {}s".format(datetime.timedelta(seconds=finish-start))
+            return embedding_model.embedding['vertices']
         else:
             print "Check gradient: ", check_grad(q, grad_q, x0)
             res = minimize(q, x0, method='BFGS', jac=grad_q)
