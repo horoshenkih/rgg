@@ -17,6 +17,7 @@ from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_co
 from lib.pair_generators import BinaryPairGenerator
 from lib.embedding_models import PoincareModel
 from lib.loss_functions import MSE
+from lib.optimization import SGD
 
 class Margin:
     "difference between distance and R"
@@ -248,22 +249,16 @@ def find_embeddings(vertices, edges, mode,
             print "Ratio to second: {}".format(ratio_to_second)
             print "Ratio between first: {}".format(ratio_between_first)
             print "Ratio random: {}".format(ratio_random)
+
             G = nx.Graph()
             G.add_edges_from(edges)
-            pair_generator = BinaryPairGenerator(G)
+
             embedding_model = PoincareModel(G)
+            pair_generator = BinaryPairGenerator(G, batch_size=1)
             loss_function = MSE(binary_edges=True)
-            for epoch in range(n_epoch):
-                pair_generator.shuffle()
-                print "Epoch {} / {} ...".format(epoch+1, n_epoch)
-                start = time.time()
-                for batch in pair_generator():
-                    x = embedding_model.get_state_vector()
-                    new_grad = loss_function.loss_gradient(batch, embedding_model.get_distance_info(batch))
-                    x -= new_grad * learning_rate
-                    embedding_model.set_state_vector(x)
-                finish = time.time()
-                print "Elapsed time: {}s".format(datetime.timedelta(seconds=finish-start))
+            optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate)
+            optimizer.optimize_embedding(embedding_model, loss_function, pair_generator)
+
             return embedding_model.embedding['vertices']
         else:
             print "Check gradient: ", check_grad(q, grad_q, x0)
@@ -285,11 +280,11 @@ def main():
     parser.add_argument('graph_file')
     parser.add_argument('embeddings_outfile')
     parser.add_argument('--mode', default='fit', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
-    parser.add_argument('--learning_rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
-    parser.add_argument('--n_epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
-    parser.add_argument('--ratio_to_second', default=2., help='ratio of nedges to second neighbour', type=float)
-    parser.add_argument('--ratio_between_first', default=1., help='ratio of nedges between first neighbours', type=float)
-    parser.add_argument('--ratio_random', default=1., help='ratio of random nedges', type=float)
+    parser.add_argument('--learning-rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
+    parser.add_argument('--n-epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
+    parser.add_argument('--ratio-to-second', default=2., help='ratio of nedges to second neighbour', type=float)
+    parser.add_argument('--ratio-between-first', default=1., help='ratio of nedges between first neighbours', type=float)
+    parser.add_argument('--ratio-random', default=1., help='ratio of random nedges', type=float)
 
     args = parser.parse_args()
     vertices, edges = read_graph_from_file(args.graph_file)
