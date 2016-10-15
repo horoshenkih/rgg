@@ -14,14 +14,20 @@ from lib.graph import read_embeddings_from_file
 def main():
     parser = ArgumentParser()
     parser.add_argument('-f', help='file with graph (edges)')
+
     parser.add_argument('-e', help='file with embedding (vertex, r, phi)')
     parser.add_argument('--skip-lines', help='skip first lines in embedding file', type=int, default=0)
     parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
+
     parser.add_argument('--clustering', help='compute clustering coefficients', action='store_true')
+
     parser.add_argument('--diameter', help='compute diameter', action='store_true')
+
     parser.add_argument('--pg', action='store_true', help='plot graph')
-    parser.add_argument('--no-edges', action='store_true', help='do not plot graph edges')
     parser.add_argument('--layout', help='graph layout (no, polar, 2d)', default='polar')
+    parser.add_argument('--no-edges', action='store_true', help='do not plot graph edges')
+    parser.add_argument('--n-vertices', type=int, help='plot number of vertices closest to the origin')
+
     parser.add_argument('--pd', action='store_true', help='plot degree distribution')
 
     args = parser.parse_args()
@@ -108,24 +114,34 @@ def main():
             if embeddings is None:
                 raise Exception("Embedding is not provided for polar layout")
             plot_idx = plot2idx['graph']
-            # vertices
-            r, phi = zip(*embeddings.values())
+
+            vert = embeddings.keys()
+            if args.n_vertices:
+                vert.sort(key=lambda x: embeddings[x][0])
+                vert = vert[:args.n_vertices]
+            vert = set(vert)
+            pairs = [embeddings[v] for v in vert]
+            r, phi = zip(*pairs)
             def deg2rad(x):
                 return 2 * np.pi * x / 360.
             if args.deg:
                 phi = map(deg2rad, phi)
-            ax = plt.subplot(1, n_plots, plot_idx, projection='polar')
-            ax.plot(phi, r, marker='o', linewidth=0)
 
+            ax = plt.subplot(1, n_plots, plot_idx, projection='polar')
             # edges
             if not args.no_edges:
                 for (v1, v2) in graph.edges():
+                    if v1 not in vert or v2 not in vert:
+                        continue
                     r1, phi1 = embeddings[v1]
                     r2, phi2 = embeddings[v2]
                     if args.deg:
                         phi1 = deg2rad(phi1)
                         phi2 = deg2rad(phi2)
                     ax.plot((phi1, phi2), (r1, r2), color='g')
+            # vertices
+            ax.plot(phi, r, marker='o', linewidth=0)
+
         elif args.layout == '2d':
             raise Exception('2d layout is not implemented')
         else:
