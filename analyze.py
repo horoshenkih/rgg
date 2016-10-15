@@ -9,20 +9,19 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 
-def parse_vertex(raw_vertex, layout):
-    if layout in ['polar', '2d']:
-        x1, x2 = [float(rv) for rv in raw_vertex.split(',')]
-        return (x1, x2)
-    else:
-        return raw_vertex
+from lib.graph import read_embeddings_from_file
 
 def main():
     parser = ArgumentParser()
     parser.add_argument('-f', help='file with graph (edges)')
+    parser.add_argument('-e', help='file with embedding (vertex, r, phi)')
+    parser.add_argument('--skip-lines', help='skip first lines in embedding file', type=int, default=0)
+    parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
     parser.add_argument('--clustering', help='compute clustering coefficients', action='store_true')
     parser.add_argument('--diameter', help='compute diameter', action='store_true')
     parser.add_argument('--pg', action='store_true', help='plot graph')
-    parser.add_argument('--layout', help='graph layout (no, polar, 2d)', default='no')
+    parser.add_argument('--no-edges', action='store_true', help='do not plot graph edges')
+    parser.add_argument('--layout', help='graph layout (no, polar, 2d)', default='polar')
     parser.add_argument('--pd', action='store_true', help='plot degree distribution')
 
     args = parser.parse_args()
@@ -33,13 +32,16 @@ def main():
 
     print "read graph"
     graph = nx.Graph()
-    for line in graph_f:
+    for i_line, line in enumerate(graph_f):
         if line.startswith('#'):
             continue
-        items = line.rstrip().split()
-        v1 = parse_vertex(items[0], args.layout)
-        v2 = parse_vertex(items[1], args.layout)
+        v1, v2 = line.rstrip().split()
         graph.add_edge(v1, v2)
+
+    embeddings = None
+    if args.e:
+        print "read embeddings"
+        embeddings = read_embeddings_from_file(args.e, args.skip_lines)
 
     print "number of vertices: {}".format(graph.number_of_nodes())
     print "number of edges: {}".format(graph.number_of_edges())
@@ -103,17 +105,27 @@ def main():
     # plot graph
     if args.pg:
         if args.layout == 'polar':
+            if embeddings is None:
+                raise Exception("Embedding is not provided for polar layout")
             plot_idx = plot2idx['graph']
             # vertices
-            r, phi = zip(*graph.nodes())
+            r, phi = zip(*embeddings.values())
+            def deg2rad(x):
+                return 2 * np.pi * x / 360.
+            if args.deg:
+                phi = map(deg2rad, phi)
             ax = plt.subplot(1, n_plots, plot_idx, projection='polar')
             ax.plot(phi, r, marker='o', linewidth=0)
 
             # edges
-            for (v1, v2) in graph.edges():
-                r1, phi1 = v1
-                r2, phi2 = v2
-                ax.plot((phi1, phi2), (r1, r2), color='g')
+            if not args.no_edges:
+                for (v1, v2) in graph.edges():
+                    r1, phi1 = embeddings[v1]
+                    r2, phi2 = embeddings[v2]
+                    if args.deg:
+                        phi1 = deg2rad(phi1)
+                        phi2 = deg2rad(phi2)
+                    ax.plot((phi1, phi2), (r1, r2), color='g')
         elif args.layout == '2d':
             raise Exception('2d layout is not implemented')
         else:

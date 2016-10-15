@@ -175,10 +175,12 @@ def read_graph_from_file(filename):
             edges.add(make_edge(v1, v2))
         return vertices, edges
 
-def read_embeddings_from_file(filename):
+def read_embeddings_from_file(filename, skip_lines=0):
     with open(filename, 'r') as f:
         embeddings = dict()
-        for line in f:
+        for i_line, line in enumerate(f):
+            if i_line + 1 <= skip_lines:
+                continue
             v, r, phi = line.rstrip().split()
             r = float(r)
             phi = float(phi)
