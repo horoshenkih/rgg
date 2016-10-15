@@ -220,4 +220,4 @@ def read_communities_from_file(filename, n_top_communities=None):
                     communities[v] = top_comm_infos
                 else:
                     del communities[v]
-            return communities
+        return communities

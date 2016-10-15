@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--n-top-comm', help='number of top communities', type=int)
 
     parser.add_argument('-e', help='file with embeddings, triple (vertex, r, phi) in each line')
-    parser.add_argument('--skip-lines', help='skip first lines in embedding file', type=int, default=0)
+    parser.add_argument('--emb-skip-lines', help='skip first lines in embedding file', type=int, default=0)
     parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
     parser.add_argument('--annotate', action='store_true', help='annotate vertices')
 
@@ -60,7 +60,7 @@ def main():
     embeddings = None
     if args.e:
         print "read embeddings"
-        embeddings = read_embeddings_from_file(args.e, args.skip_lines)
+        embeddings = read_embeddings_from_file(args.e, args.emb_skip_lines)
 
     print "number of vertices: {}".format(graph.number_of_nodes())
     print "number of edges: {}".format(graph.number_of_edges())
@@ -142,7 +142,7 @@ def main():
                 colors=[]
                 # find dominating community
                 for v in vert:
-                    comm_index, comm_size, comm_color = max(communities.get(v, [(0, 1, (0,0,0))]), key=lambda x: x[1])
+                    comm_index, comm_size, comm_color = max(communities.get(v, [(0, 1, (0.9,0.9,0.9, 0.25))]), key=lambda x: x[1])
                     colors.append(comm_color)
             ax = plt.subplot(1, n_plots, plot_idx, projection='polar')
             # edges
