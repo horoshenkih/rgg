@@ -186,3 +186,38 @@ def read_embeddings_from_file(filename, skip_lines=0):
             phi = float(phi)
             embeddings[v] = (r, phi)
         return embeddings
+
+def read_communities_from_file(filename, n_top_communities=None):
+    with open(filename, 'r') as f:
+        communities = dict()
+        all_comm_size = []
+        np.random.seed(0)  # community colors should be the same if possible
+        for i_line, line in enumerate(f):
+            comm_index = i_line + 1
+            vertices = line.rstrip().split()
+            comm_size = len(vertices)
+            all_comm_size.append((comm_index, comm_size))
+            R = np.random.uniform()
+            G = np.random.uniform()
+            B = np.random.uniform()
+            comm_color = (R,G,B)  # random RGB
+            comm_info = (comm_index, comm_size, comm_color)
+            for v in vertices:
+                if v in communities:
+                    communities[v].append(comm_info)
+                else:
+                    communities[v] = [comm_info]
+
+        if n_top_communities is not None:
+            # find top communities
+            all_comm_size.sort(key=lambda x: -x[1])
+            top_comms = set([comm for comm, size in all_comm_size[:n_top_communities]])
+
+            # select only top communitites for each vertex
+            for v, comm_infos in communities.items():
+                top_comm_infos = filter(lambda x: x[0] in top_comms, comm_infos)
+                if len(top_comm_infos):
+                    communities[v] = top_comm_infos
+                else:
+                    del communities[v]
+            return communities

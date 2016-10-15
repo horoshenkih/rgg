@@ -9,13 +9,20 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 
-from lib.graph import read_embeddings_from_file
+from lib.graph import read_embeddings_from_file, read_communities_from_file
+
+def deg2rad(x):
+    # faster to write than to google it
+    return 2 * np.pi * x / 360.
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('-f', help='file with graph (edges)')
+    parser.add_argument('-f', help='file with graph, edge in each line')
 
-    parser.add_argument('-e', help='file with embedding (vertex, r, phi)')
+    parser.add_argument('-c', help='file with communities, list of vertices in each line')
+    parser.add_argument('--n-top-comm', help='number of top communities', type=int)
+
+    parser.add_argument('-e', help='file with embeddings, triple (vertex, r, phi) in each line')
     parser.add_argument('--skip-lines', help='skip first lines in embedding file', type=int, default=0)
     parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
     parser.add_argument('--annotate', action='store_true', help='annotate vertices')
@@ -44,6 +51,11 @@ def main():
             continue
         v1, v2 = line.rstrip().split()
         graph.add_edge(v1, v2)
+
+    communities = None
+    if args.c:
+        print "read communities"
+        communities = read_communities_from_file(args.c, args.n_top_comm)
 
     embeddings = None
     if args.e:
@@ -120,16 +132,21 @@ def main():
             if args.n_vertices:
                 vert.sort(key=lambda x: embeddings[x][0])
                 vert = vert[:args.n_vertices]
-            vert = set(vert)
             pairs = [embeddings[v] for v in vert]
             r, phi = zip(*pairs)
-            def deg2rad(x):
-                return 2 * np.pi * x / 360.
             if args.deg:
                 phi = map(deg2rad, phi)
 
+            colors = None
+            if communities is not None:
+                colors=[]
+                # find dominating community
+                for v in vert:
+                    comm_index, comm_size, comm_color = max(communities.get(v, [(0, 1, (0,0,0))]), key=lambda x: x[1])
+                    colors.append(comm_color)
             ax = plt.subplot(1, n_plots, plot_idx, projection='polar')
             # edges
+            vert = set(vert)  # check inclustion in set is faster
             if not args.no_edges:
                 for (v1, v2) in graph.edges():
                     if v1 not in vert or v2 not in vert:
@@ -141,13 +158,20 @@ def main():
                         phi2 = deg2rad(phi2)
                     ax.plot((phi1, phi2), (r1, r2), color='g')
             # vertices
-            ax.plot(phi, r, marker='o', linewidth=0)
+            if colors is None:
+                ax.plot(phi, r, marker='o', linewidth=0)
+            else:
+                for phi, r, color in zip (phi, r, colors):
+                    ax.scatter(phi, r, color=color)
             if args.annotate:
                 for v in vert:
                     r, phi = embeddings[v]
                     if args.deg:
                         phi = deg2rad(phi)
-                        ax.annotate(str(v), xy=(phi, r), xytext=(phi, r), horizontalalignment='left', verticalalignment='top')
+                        ax.annotate(
+                            str(v), xy=(phi, r), xytext=(phi, r),
+                            horizontalalignment='left', verticalalignment='top'
+                        )
 
         elif args.layout == '2d':
             raise Exception('2d layout is not implemented')
