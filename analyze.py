@@ -18,6 +18,7 @@ def main():
     parser.add_argument('-e', help='file with embedding (vertex, r, phi)')
     parser.add_argument('--skip-lines', help='skip first lines in embedding file', type=int, default=0)
     parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
+    parser.add_argument('--annotate', action='store_true', help='annotate vertices')
 
     parser.add_argument('--clustering', help='compute clustering coefficients', action='store_true')
 
@@ -141,6 +142,12 @@ def main():
                     ax.plot((phi1, phi2), (r1, r2), color='g')
             # vertices
             ax.plot(phi, r, marker='o', linewidth=0)
+            if args.annotate:
+                for v in vert:
+                    r, phi = embeddings[v]
+                    if args.deg:
+                        phi = deg2rad(phi)
+                        ax.annotate(str(v), xy=(phi, r), xytext=(phi, r), horizontalalignment='left', verticalalignment='top')
 
         elif args.layout == '2d':
             raise Exception('2d layout is not implemented')
