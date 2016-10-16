@@ -11,7 +11,7 @@ from sklearn.neighbors import BallTree
 
 from lib.graph import read_graph_from_file, read_embeddings_from_file, distance, make_edge
 
-def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False):
+def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_max_vertices=1000, gr_max_pairs=10000):
     "evaluate quality of embeddings compared with real elge set"
     report = []
 
@@ -36,12 +36,11 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False):
 
     # compute number of correct DIRECTED arcs assuming that degrees are known
     if cda:
-        max_vertices = 6000
         all_correct_arcs = set()
         cda_vertices = vertices[:]
-        if len(cda_vertices) > max_vertices:
+        if len(cda_vertices) > cda_max_vertices:
             np.random.shuffle(cda_vertices)
-            cda_vertices = cda_vertices[:max_vertices]
+            cda_vertices = cda_vertices[:cda_max_vertices]
         for v_i, v in enumerate(cda_vertices):
             start = time.time()
             degree = degrees[v]
@@ -51,17 +50,16 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False):
                 if make_edge(v, ne) in edges:
                     all_correct_arcs.add((v, ne))
             finish = time.time()
-            print "DEBUG: {} / {}, time={}s".format(v_i + 1, len(cda_vertices), datetime.timedelta(seconds=finish-start))
+            #print "DEBUG: {} / {}, time={}s".format(v_i + 1, len(cda_vertices), datetime.timedelta(seconds=finish-start))
         report.append(['ratio of correct arcs for known degrees', float(len(all_correct_arcs)) / (2 * len(edges))])
 
     if greedy_routing:
         print "compute greedy routing efficiency"
-        max_pairs = 10000
         random_pairs = set()
-        if n * (n-1) / 2 <= max_pairs:
+        if n * (n-1) / 2 <= gr_max_pairs:
             random_pairs = set(combinations(vertices, 2))
         else:
-            while(len(random_pairs) < max_pairs):
+            while(len(random_pairs) < gr_max_pairs):
                 v1 = np.random.choice(vertices)
                 v2 = np.random.choice(vertices)
                 if v1 != v2:
@@ -140,7 +138,9 @@ def main():
     parser.add_argument('embeddings_file')
     parser.add_argument('--deg', action='store_true', help='angle in degrees')
     parser.add_argument('--cda', action='store_true', help='correct directed arcs')
+    parser.add_argument('--cda-max-vertices', type=int, default=1000)
     parser.add_argument('--gr', action='store_true', help='evaluate greedy routing')
+    parser.add_argument('--gr-max-pairs', type=int, default=10000)
     args = parser.parse_args()
 
     vertices, edges = read_graph_from_file(args.graph_file)
@@ -150,7 +150,10 @@ def main():
     embeddings = read_embeddings_from_file(args.embeddings_file, skip_lines, degrees=args.deg)
 
     print "Evaluate embeddings"
-    report = evaluate_embeddings(embeddings, edges, cda=args.cda, greedy_routing=args.gr)
+    report = evaluate_embeddings(embeddings, edges,
+        cda=args.cda, cda_max_vertices=args.cda_max_vertices,
+        greedy_routing=args.gr, gr_max_pairs=args.gr_max_pairs
+    )
 
     print 'report'
     for name, value in report:
