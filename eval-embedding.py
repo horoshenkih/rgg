@@ -2,6 +2,8 @@
 import argparse
 from collections import defaultdict
 from itertools import combinations
+import time
+import datetime
 
 import numpy as np
 import networkx as nx
@@ -34,14 +36,22 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False):
 
     # compute number of correct DIRECTED arcs assuming that degrees are known
     if cda:
+        max_vertices = 6000
         all_correct_arcs = set()
-        for v in vertices:
+        cda_vertices = vertices[:]
+        if len(cda_vertices) > max_vertices:
+            np.random.shuffle(cda_vertices)
+            cda_vertices = cda_vertices[:max_vertices]
+        for v_i, v in enumerate(cda_vertices):
+            start = time.time()
             degree = degrees[v]
             dist, ind = bt.query(embeddings[v], k=degree+1)  # one of neighbors is vertex inself
             neigh = [vertices[i] for i in ind[0].tolist() if vertices[i] != v]
             for ne in neigh:
                 if make_edge(v, ne) in edges:
                     all_correct_arcs.add((v, ne))
+            finish = time.time()
+            print "DEBUG: {} / {}, time={}s".format(v_i + 1, len(cda_vertices), datetime.timedelta(seconds=finish-start))
         report.append(['ratio of correct arcs for known degrees', float(len(all_correct_arcs)) / (2 * len(edges))])
 
     if greedy_routing:
@@ -128,12 +138,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
     parser.add_argument('embeddings_file')
+    parser.add_argument('--deg', action='store_true', help='angle in degrees')
     parser.add_argument('--cda', action='store_true', help='correct directed arcs')
     parser.add_argument('--gr', action='store_true', help='evaluate greedy routing')
     args = parser.parse_args()
 
     vertices, edges = read_graph_from_file(args.graph_file)
-    embeddings = read_embeddings_from_file(args.embeddings_file)
+    skip_lines=0
+    if args.deg:
+        skip_lines=2
+    embeddings = read_embeddings_from_file(args.embeddings_file, skip_lines, degrees=args.deg)
 
     print "Evaluate embeddings"
     report = evaluate_embeddings(embeddings, edges, cda=args.cda, greedy_routing=args.gr)
