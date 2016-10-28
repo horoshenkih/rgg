@@ -168,10 +168,10 @@ def main():
                     r, phi = embeddings[v]
                     if args.deg:
                         phi = deg2rad(phi)
-                        ax.annotate(
-                            str(v), xy=(phi, r), xytext=(phi, r),
-                            horizontalalignment='left', verticalalignment='top'
-                        )
+                    ax.annotate(
+                        str(v), xy=(phi, r), xytext=(phi, r),
+                        horizontalalignment='left', verticalalignment='top'
+                    )
 
         elif args.layout == '2d':
             raise Exception('2d layout is not implemented')
