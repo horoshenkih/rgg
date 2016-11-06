@@ -13,7 +13,7 @@ from scipy.optimize import minimize, check_grad
 
 import networkx as nx
 
-from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d
+from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d, fringe
 from lib.pair_generators import BinaryPairGenerator
 from lib.embedding_models import PoincareModel
 from lib.loss_functions import MSE
@@ -254,15 +254,59 @@ def find_embeddings(vertices, edges, mode,
             G = nx.Graph()
             G.add_edges_from(edges)
 
-            embedding_model = PoincareModel(G, fit_radius=True)
-            print "Radius before: {}".format(embedding_model.embedding['radius'])
-            pair_generator = BinaryPairGenerator(G, batch_size=1)
+            # construct connected(!) core
+            core_exponent = 0.4
+            core_vertices, fringe_vertices = [], []
+            # one-pass split by condition
+            for v in vertices:
+                core_vertices.append(v) if degrees[v] >= n**core_exponent else fringe_vertices.append(v)
+            # add vertices to ensure connectivity of core
+            fringe_vertices.sort(key=lambda v: -degrees[v])
+            while not nx.is_connected(G.subgraph(core_vertices)):
+                core_vertices.append(fringe_vertices.pop(0))
+
+            print "Core size: {}".format(len(core_vertices))
+            G_core = G.subgraph(core_vertices)
+            print "Is core connected:", nx.is_connected(G_core)
+
             loss_function = MSE(binary_edges=True)
             optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate, verbose=not silent)
-            optimizer.optimize_embedding(embedding_model, loss_function, pair_generator)
-            print "Radius after: {}".format(embedding_model.embedding['radius'])
 
-            return embedding_model.embedding['vertices']
+            FRINGE_FRACTION = 0.1
+            max_fringe_size = int(G.number_of_nodes() * FRINGE_FRACTION)
+            curr_graph = G.subgraph(core_vertices)
+            curr_core_vertices = set(core_vertices)
+            curr_embedding_model = PoincareModel(curr_graph, fit_radius=False)
+            curr_pair_generator = BinaryPairGenerator(curr_graph, batch_size=1)
+            optimizer.optimize_embedding(curr_embedding_model, loss_function, curr_pair_generator)
+            for i in range(int(1/FRINGE_FRACTION)+1):
+                total_fringe = fringe(G, curr_core_vertices)
+                #print "DEBUG:", curr_graph. number_of_nodes(), len(curr_core_vertices), len(total_fringe)
+                fringe_vertices = set(sorted(total_fringe, key=lambda v: -G.degree(v))[:max_fringe_size])
+                #print "DEBUG:", i+1, fringe_vertices
+                if not fringe_vertices:
+                    break
+                curr_graph = G.subgraph(curr_core_vertices | fringe_vertices)
+                curr_embedding_model = PoincareModel(curr_graph, fit_radius=False, init_embedding=curr_embedding_model)
+                curr_pair_generator = BinaryPairGenerator(curr_graph, batch_size=1)
+                optimizer.optimize_embedding(curr_embedding_model, loss_function, curr_pair_generator, fixed_vertices=curr_core_vertices)
+
+                curr_core_vertices |= fringe_vertices
+
+            embedding_model = curr_embedding_model
+            '''
+            core_embedding_model = PoincareModel(G_core, fit_radius=False)
+            core_pair_generator = BinaryPairGenerator(G_core, batch_size=1)
+            optimizer.optimize_embedding(core_embedding_model, loss_function, core_pair_generator)
+            #optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate, verbose=not silent)
+            embedding_model = PoincareModel(G, fit_radius=False, init_embedding=core_embedding_model)
+            pair_generator = BinaryPairGenerator(G, batch_size=1)
+            optimizer.optimize_embedding(embedding_model, loss_function, pair_generator, fixed_vertices=core_vertices)
+
+            #print "Radius before: {}".format(embedding_model.embedding['radius'])
+            #print "Radius after: {}".format(embedding_model.embedding['radius'])
+            '''
+            return (embedding_model.embedding['vertices'], {'core': list(G.edges())})
         else:
             print "Check gradient: ", check_grad(q, grad_q, x0)
             res = minimize(q, x0, method='BFGS', jac=grad_q)
@@ -281,7 +325,7 @@ def find_embeddings(vertices, edges, mode,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('graph_file')
-    parser.add_argument('embeddings_outfile')
+    parser.add_argument('out_prefix')
     parser.add_argument('--mode', default='fit_degrees_sgd', help='random|degrees|fit|fit_random|fit_degrees|fit_degrees_sgd')
     parser.add_argument('--learning-rate', default=0.1, help='learning rate for fit_degrees_sgd', type=float)
     parser.add_argument('--n-epoch', default=100, help='number of training epoch for fit_degrees_sgd', type=int)
@@ -298,16 +342,22 @@ def main():
     print "Number of non-edges: {}".format(n*(n-1)/2 - len(edges))
 
     print "Find embeddings"
-    embeddings = find_embeddings(vertices, edges, mode=args.mode,
+    embeddings, info = find_embeddings(vertices, edges, mode=args.mode,
         learning_rate=args.learning_rate, n_epoch=args.n_epoch,
         ratio_to_second=args.ratio_to_second, ratio_between_first=args.ratio_between_first, ratio_random=args.ratio_random,
         silent=args.silent
     )
 
-    with open(args.embeddings_outfile, 'w') as of:
+    with open(args.out_prefix+'-embeddings.txt', 'w') as of:
         for v in embeddings.keys():
             r, phi = embeddings[v]
-            of.write(' '.join(map(str, [v, r, phi]))+'\n')
+            of.write('\t'.join(map(str, [v, r, phi]))+'\n')
+
+    core = info['core']
+    if core is not None:
+        with open(args.out_prefix+'-core.txt', 'w') as of_core:
+            for v1, v2 in core:
+                of_core.write('\t'.join(map(str, [v1, v2]))+'\n')
 
 if __name__ == '__main__':
     main()

@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 from scipy import sparse
 
-from graph import distance, grad_distance
+from graph import distance, grad_distance, fringe
 
 class EmbeddingModel:
     __metaclass__ = ABCMeta
@@ -29,7 +29,7 @@ class EmbeddingModel:
         pass
 
 class PoincareModel(EmbeddingModel):
-    def __init__(self, graph, radius=None, fit_radius=False):
+    def __init__(self, graph, init_embedding=None, radius=None, fit_radius=False):
         self.graph = graph
         n = self.graph.number_of_nodes()
         self.fit_radius = fit_radius
@@ -46,10 +46,38 @@ class PoincareModel(EmbeddingModel):
             'vertices': {},
             'radius': radius,
         }
-        for v in self.graph.nodes():
+
+        def gen_random_coordinates(v):
             r = 2*np.log(float(n) / self.graph.degree(v))
             phi = np.random.uniform(0.0, 2*np.pi)
-            self.embedding['vertices'][v] = (r, phi)
+            return (r, phi)
+
+        def delta_phi(r, R):
+            # compute \Delta\phi from equality
+            # \cosh(R) = \cosh^2(r) - \sinh^2(r) * \cos(\Delta\phi)
+            cos_delta_phi = (np.cosh(r)**2 - np.cosh(R)) / np.sinh(r)**2
+            cos_delta_phi = max(-1., min(1., cos_delta_phi))
+            return np.arccos(cos_delta_phi)
+
+        if init_embedding is not None:
+            init_embedding_fringe = fringe(self.graph, init_embedding.embedding['vertices'])
+            for v in self.graph.nodes():
+                if v in init_embedding.embedding['vertices']:
+                    self.embedding['vertices'][v] = init_embedding.embedding['vertices'][v]
+                #elif any([_n in init_embedding.embedding['vertices'] for _n in self.graph.neighbors(v)]):
+                elif v in init_embedding_fringe:
+                    neigh = list(set(self.graph.neighbors(v)) & set(init_embedding.embedding['vertices']))[0]
+                    r_n, phi_n = init_embedding.embedding['vertices'][neigh]
+                    delta_phi_n = delta_phi(r_n, radius)
+                    r_random, phi_zzz = gen_random_coordinates(v)
+                    phi_random_with_delta = np.random.uniform(4*np.pi + phi_n - delta_phi_n, 4*np.pi + phi_n + delta_phi_n)
+                    self.embedding['vertices'][v] = (r_random, phi_random_with_delta)
+                else:
+                    self.embedding['vertices'][v] = gen_random_coordinates(v)
+        else:
+            for v in self.graph.nodes():
+                self.embedding['vertices'][v] = gen_random_coordinates(v)
+
         self._vertex2index = {}
         for i, v in enumerate(sorted(self.embedding['vertices'])):
             self._vertex2index[v] = i
@@ -71,18 +99,21 @@ class PoincareModel(EmbeddingModel):
             x[-1] = self.embedding['radius']
         return x
 
-    def set_state_vector(self, x):
+    def set_state_vector(self, x, fixed_vertices=set()):
         if x.shape[0] != self.__expected_vector_size:
             raise Exception("Wrong number of elements in vector: {} instead of {}".format(x.shape[0], self.__expected_vector_size))
         vertices = self.embedding['vertices']
         for v, i in self._vertex2index.iteritems():
+            if v in fixed_vertices:
+                # do not update fixed vertices
+                continue
             r = x[2*i]
             phi = x[2*i+1]
             vertices[v] = (r, phi)
         if self.fit_radius:
             self.embedding['radius'] = x[-1]
 
-    def get_distance_info(self, edges_batch):
+    def get_distance_info(self, edges_batch,fixed_vertices=set()):
         distance_info = dict()
         distance_info['radius'] = self.embedding['radius']
         distance_info['fit_radius'] = self.fit_radius
@@ -90,6 +121,8 @@ class PoincareModel(EmbeddingModel):
         distance_info['distance_gradients'] = dict()
 
         for edge, w, mult in edges_batch:
+            if all([v in fixed_vertices for v in edge]):
+                continue
             e_v1, e_v2 = [self.get_vertex_embedding(v) for v in edge]
             distance_info['distances'][edge] = distance(e_v1, e_v2)
             # prepare sparse matrix

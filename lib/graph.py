@@ -165,11 +165,19 @@ def grad_distance(v1, v2):
 def make_edge(v1, v2):
     return tuple(sorted((v1, v2)))
 
+def fringe(graph, core_vertices):
+    fringe = set()
+    for v in core_vertices:
+        fringe.update(graph.neighbors(v))
+    return fringe - set(core_vertices)
+
 def read_graph_from_file(filename):
     with open(filename, 'r') as f:
         edges = set()
         vertices = set()
         for line in f:
+            if line.startswith('#'):
+                continue
             v1, v2 = line.rstrip().split()
             vertices.update((v1, v2))
             edges.add(make_edge(v1, v2))

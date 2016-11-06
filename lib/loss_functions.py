@@ -50,6 +50,8 @@ class MSE(LossFunction):
         for e, w, mult in edges_batch:
             if self.binary_edges:
                 w = 1. if w else 0.
+            if e not in distance_info['distances']:
+                continue
             d = distance_info['distances'][e]
             p = self.edge_predictor.predict(d, r, self.beta)
             dp = self.edge_predictor.prediction_gradient_d(d, r, self.beta)
