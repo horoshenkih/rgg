@@ -16,7 +16,7 @@ import networkx as nx
 from lib.graph import make_edge, read_graph_from_file, cosh_d, distance, grad_cosh_d, fringe
 from lib.pair_generators import BinaryPairGenerator
 from lib.embedding_models import PoincareModel
-from lib.loss_functions import MSE
+from lib.loss_functions import MSE, LogLoss
 from lib.optimization import SGD
 
 class Margin:
@@ -269,7 +269,8 @@ def find_embeddings(vertices, edges, mode,
             G_core = G.subgraph(core_vertices)
             print "Is core connected:", nx.is_connected(G_core)
 
-            loss_function = MSE(binary_edges=True)
+            #loss_function = MSE(binary_edges=True)
+            loss_function = LogLoss(binary_edges=True)
             optimizer = SGD(n_epoch=n_epoch, learning_rate=learning_rate, verbose=not silent)
 
             FRINGE_FRACTION = 0.1
