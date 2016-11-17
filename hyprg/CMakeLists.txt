@@ -6,6 +6,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lboost_program_options")
 link_directories(/usr/local/lib)
 include_directories(/usr/local/lib)
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES main.cpp lib/graph.h lib/utils.h lib/graph.cpp lib/utils.cpp)
 add_executable(hyprg ${SOURCE_FILES})
 target_link_libraries(hyprg boost_program_options)

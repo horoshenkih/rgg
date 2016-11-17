@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
-#include "boost/program_options.hpp"
+#include <boost/program_options.hpp>
+
+#include "lib/utils.h"
 
 using std::cout;
 using std::endl;
@@ -27,10 +29,17 @@ int main(int argc, char **argv) {
 
     if (vm.count("help")) {
         cout << desc << endl;
-        return 1;
+        return 0;
     }
     po::notify(vm);
 
-    cout << "Hello, World!" << endl;
+    cout << "Read graph from: " << graph_file << endl;
+    Graph G = read_graph_from_file(graph_file.c_str());
+
+    cout << "Number of nodes: " << G.number_of_nodes() << endl;
+    cout << "Number of edges: " << G.number_of_edges() << endl;
+
+    cout << "Output results: " << out_prefix << "-*" << endl;
+
     return 0;
 }
