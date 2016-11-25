@@ -41,5 +41,15 @@ int main(int argc, char **argv) {
 
     cout << "Output results: " << out_prefix << "-*" << endl;
 
+    cout << "Find components" << endl;
+    Components cc(G);
+    cout << "Number of components: " << cc.get_components_count() << endl;
+    /*
+    for (const auto &n: G.get_nodes()) {
+        unsigned int cid = cc.node_component_id(n);
+        cout << n << "\t" << cid << "\t" << cc.component_size(cid) << endl;
+    }
+     */
+
     return 0;
 }

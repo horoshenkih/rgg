@@ -15,6 +15,9 @@ Graph read_graph_from_file(const char *filename) {
     std::ifstream infile(filename);
     string line;
     while (std::getline(infile, line)) {
+        if (line.find("#") == 0) {
+            continue;
+        }
         std::istringstream iss(line);
         string a, b;
         if (!(iss >> a >> b)) { throw std::runtime_error("wrong line format"); }
