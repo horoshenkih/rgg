@@ -19,7 +19,15 @@ Edge::Edge(string a, string b) {
     }
 }
 
-bool Nodes::exists(const Node& node) {
+bool Edge::operator==(const Edge &other) const {
+    return this->node_pair.first == other.node_pair.first && this->node_pair.second == other.node_pair.second;
+}
+
+string Edge::repr() const {
+    return this->node_pair.first + "\t" + this->node_pair.second;
+}
+
+bool Nodes::exists(const Node& node) const {
     return nodes.find(node) != nodes.end();
 }
 void Nodes::add_node(const Node& node) {
@@ -55,7 +63,12 @@ void Graph::add_node(const string& n) {
 }
 
 void Graph::add_edge(const string& a, const string& b) {
-    edges.push_back(Edge(a, b));
+    Edge e(a,b);
+    if (edges.find(e) != edges.end()) {
+        // edge exists
+        return;
+    }
+    edges.insert(e);
     Node na(a);
     Node nb(b);
     add_node(a);
@@ -70,6 +83,26 @@ set<Node> Graph::neighbors(const Node& n) const {
     return adj_map.find(n)->second;//.second;
 }
 
+bool Graph::has_node(const Node &node) const { return nodes.exists(node); }
+
+//template <typename T> Graph& Graph::subgraph(const T &nodes_container) const
+Graph* Graph::subgraph(const vector<Node> &nodes_container) const {
+    Graph* G = new Graph();
+    // add nodes
+    for (Node node: nodes_container) {
+        G->add_node(node);
+    }
+    // add edges
+    for (Node node : G->get_nodes()) {
+        // find neighbors in original graph
+        for (Node neigh : this->neighbors(node)) {
+            if (G->has_node(neigh)) {
+                G->add_edge(node, neigh);
+            }
+        }
+    }
+    return G;
+}
 /*
 set<Node> Graph::neighbors(const string& n) {
     return this->neighbors(Node(n));
@@ -109,8 +142,8 @@ void Components::ccR(const Node &n) {
         for (auto neigh : G.neighbors(s)) {
             if (!is_labelled_node(neigh)) {
                 component_ids[neigh] = components_count;
+                component_sizes[components_count]++;
                 dfs_stack.push(neigh);
-                //ccR(neigh);
             }
         }
     }
@@ -133,3 +166,15 @@ unsigned int Components::component_size(int component_id) {
 }
 
 int Components::get_components_count() {return components_count;}
+
+int Components::max_component_id() {
+    int max_component_size = 0;
+    int max_component_id = -1;
+    for (auto it: component_sizes) {
+        if (it.second >= max_component_size) {
+            max_component_id = it.first;
+            max_component_size = component_sizes[it.first];
+        }
+    }
+    return max_component_id;
+}
