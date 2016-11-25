@@ -85,6 +85,7 @@ public:
     set<Node> neighbors(const Node&) const;
     //template<typename T> Graph& subgraph(const T& nodes_container) const;
     Graph* subgraph(const vector<Node> &nodes_container) const;
+    Graph* large_component() const;
     //set<Node> neighbors(const string&);
 };
 

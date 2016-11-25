@@ -59,9 +59,8 @@ int main(int argc, char **argv) {
     describe_graph(G);
     cout << endl;
 
-    vector<Node> subgraph_nodes {"3", "4", "5"};
-    Graph* subG = G.subgraph(subgraph_nodes);
-    cout << "Subgraph" << endl;
+    Graph* subG = G.large_component();
+    cout << "Large component" << endl;
     describe_graph(*subG);
 
     return 0;

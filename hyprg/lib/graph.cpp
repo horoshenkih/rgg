@@ -85,7 +85,6 @@ set<Node> Graph::neighbors(const Node& n) const {
 
 bool Graph::has_node(const Node &node) const { return nodes.exists(node); }
 
-//template <typename T> Graph& Graph::subgraph(const T &nodes_container) const
 Graph* Graph::subgraph(const vector<Node> &nodes_container) const {
     Graph* G = new Graph();
     // add nodes
@@ -103,6 +102,20 @@ Graph* Graph::subgraph(const vector<Node> &nodes_container) const {
     }
     return G;
 }
+
+Graph* Graph::large_component() const {
+    Components cc(*this);
+    int max_component_id = cc.max_component_id();
+    vector<Node> lcc_nodes;
+    for (auto node : this->get_nodes()) {
+        if (cc.node_component_id(node) == max_component_id) {
+            lcc_nodes.push_back(node);
+        }
+    }
+    Graph* G = this->subgraph(lcc_nodes);
+    return G;
+}
+
 /*
 set<Node> Graph::neighbors(const string& n) {
     return this->neighbors(Node(n));
