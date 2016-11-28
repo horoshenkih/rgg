@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <boost/program_options.hpp>
 
 #include "lib/utils.h"
 
@@ -31,25 +30,13 @@ int main(int argc, char **argv) {
     string out_prefix;
 
     // parse options
-    namespace po = boost::program_options;
-
-    po::options_description desc("Allowed options");
-    desc.add_options()
-            ("graph-file", po::value<string>(&graph_file)->required(), "file with graph nodes")
-            ("out-prefix", po::value<string>(&out_prefix)->required(), "prefix for output files")
-            ("help", "produce help message");
-    po::positional_options_description pos_desc;
-    pos_desc.add("graph-file", 1);
-    pos_desc.add("out-prefix", 2);
-
-    po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-
-    if (vm.count("help")) {
-        cout << desc << endl;
-        return 0;
+    vector<string> command_line(argv+1, argv+argc);
+    if (command_line.size() < 2) {
+        cout << "Usage: ./hyprg GRAPH_FILE OUT_PREFIX" << endl;
+        return 1;
     }
-    po::notify(vm);
+    graph_file = command_line[0];
+    out_prefix = command_line[1];
 
     cout << "Output results: " << out_prefix << "-*" << endl;
 
