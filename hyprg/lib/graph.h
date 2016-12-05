@@ -12,7 +12,7 @@
 #include <map>
 #include <set>
 #include <unordered_set>
-//#include <boost/graph/adjacency_list.hpp>
+#include <algorithm>
 
 using std::string;
 using std::vector;
@@ -22,6 +22,7 @@ using std::set;
 using std::unordered_set;
 
 typedef string Node;
+typedef vector<double> Coordinates;
 
 class Edge {
 private:
@@ -43,11 +44,15 @@ class NodeDescription {
 private:
     unsigned int degree;
     int component_id;
+    Coordinates coordinates {0., 0.};
 public:
     NodeDescription();
     void increment_degree();
+    unsigned int get_degree();
     int get_component_id();
     void set_component_id(int);
+    Coordinates get_coordinates() const;
+    void set_coordinates(const Coordinates &);
 };
 
 typedef map<Node, NodeDescription> NodeMap;
@@ -63,6 +68,9 @@ public:
     bool exists(const Node&) const;
     void increment_degree(Node);
     unsigned int size() const;
+
+    NodeDescription get_description(const Node &) const;
+    void set_description(const Node &, const NodeDescription &);
 
     typedef NodeContainter::const_iterator const_iterator;
     const_iterator begin() const {return nodes_list.begin();}
@@ -80,14 +88,33 @@ public:
     unsigned int number_of_nodes() const;
     bool has_node(const Node&) const;
     unsigned int number_of_edges() const;
+
     void add_node(const string&);
     void add_edge(const string&, const string&);
     set<Node> neighbors(const Node&) const;
-    //template<typename T> Graph& subgraph(const T& nodes_container) const;
-    Graph* subgraph(const vector<Node> &nodes_container) const;
+    set<Node> core_nodes(double) const;
+    template <typename TNodeContainer> Graph* subgraph(const TNodeContainer &) const;
+    template <typename TNodeContainer> set<Node> fringe_nodes(const TNodeContainer &) const;
     Graph* large_component() const;
-    //set<Node> neighbors(const string&);
+    bool is_connected() const;
+
+    NodeDescription get_node_description(const Node &) const;
+    void set_node_description(const Node &, const NodeDescription &);
 };
+
+template <typename TNodeContainer>
+set<Node> Graph::fringe_nodes(const TNodeContainer &nodes_container) const {
+    set<Node> fringe;
+    for (auto v : nodes_container) {
+        for (auto n: this->neighbors(v)) {
+            fringe.insert(n);
+        }
+    }
+    for (auto node : nodes_container) {
+        fringe.erase(node);
+    }
+    return fringe;
+}
 
 class Components {
 private:

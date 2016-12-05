@@ -2,12 +2,17 @@
 // Created by serkh on 11/12/16.
 //
 #include "graph.h"
+
 #include <iostream>
 #include <stack>
+#include <cmath>
+#include <algorithm>
+#include <iterator>
 
 using std::cout;
 using std::endl;
 using std::stack;
+using std::set;
 
 Edge::Edge(string a, string b) {
     Node na(a);
@@ -43,10 +48,28 @@ void Nodes::increment_degree(Node n) {
     }
 }
 
+NodeDescription Nodes::get_description(const Node &node) const {
+    if (exists(node)) {
+        auto desc = nodes.find(node);
+        return desc->second;
+    } else {
+        return NodeDescription();
+    }
+
+}
+
+void Nodes::set_description(const Node &node, const NodeDescription &d) {
+    nodes[node] = d;
+}
+
 NodeDescription::NodeDescription() : degree(0), component_id(-1) {}
+unsigned int NodeDescription::get_degree() {return degree;}
 void NodeDescription::increment_degree() {degree++;}
 int NodeDescription::get_component_id() {return component_id;}
 void NodeDescription::set_component_id(int id) {component_id = id;}
+
+Coordinates NodeDescription::get_coordinates() const {return coordinates;}
+void NodeDescription::set_coordinates(const Coordinates & c) { coordinates = c; }
 
 const Nodes& Graph::get_nodes() const {return nodes;}
 
@@ -80,12 +103,50 @@ void Graph::add_edge(const string& a, const string& b) {
 }
 
 set<Node> Graph::neighbors(const Node& n) const {
-    return adj_map.find(n)->second;//.second;
+    if (adj_map.find(n) != adj_map.end()) {
+        return adj_map.find(n)->second;
+    } else {
+        return set<Node>();
+    }
+}
+
+bool Graph::is_connected() const {
+    Components cc(*this);
+    return cc.get_components_count() == 1;
+}
+
+set<Node> Graph::core_nodes(double core_exponent=0.5) const {
+    set<Node> core;
+    double min_degree = pow(this->number_of_nodes(), core_exponent);
+    for (auto v : this->get_nodes()) {
+        NodeDescription d = this->get_node_description(v);
+        if (d.get_degree() >= min_degree) {
+            core.insert(v);
+        }
+    }
+
+    Graph *subG = this->subgraph(core);
+    if (subG->is_connected()) {
+        return core;
+    } else {
+        // TODO
+        //while(!this->subgraph(core)->is_connected()) { }
+        return core;
+    }
 }
 
 bool Graph::has_node(const Node &node) const { return nodes.exists(node); }
 
-Graph* Graph::subgraph(const vector<Node> &nodes_container) const {
+NodeDescription Graph::get_node_description(const Node &node) const {
+    return nodes.get_description(node);
+}
+
+void Graph::set_node_description(const Node &node, const NodeDescription &d) {
+    nodes.set_description(node, d);
+}
+
+template <typename TNodeContainer>
+Graph* Graph::subgraph(const TNodeContainer &nodes_container) const {
     Graph* G = new Graph();
     // add nodes
     for (Node node: nodes_container) {
