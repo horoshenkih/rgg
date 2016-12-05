@@ -25,4 +25,3 @@ Graph read_graph_from_file(const char *filename) {
     }
     return G;
 }
-

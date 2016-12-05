@@ -8,13 +8,14 @@
 #include <cmath>
 #include <algorithm>
 #include <iterator>
+#include <string>
 
 using std::cout;
 using std::endl;
 using std::stack;
 using std::set;
 
-Edge::Edge(string a, string b) {
+Edge::Edge(string a, string b, double v, double w) {
     Node na(a);
     Node nb(b);
     if (na < nb) {
@@ -22,15 +23,32 @@ Edge::Edge(string a, string b) {
     } else {
         node_pair = pair<Node, Node>(nb, na);
     }
+    value = v;
+    weight = w;
 }
+
+Edge::Edge(string a, string b) : Edge(a, b, 1., 1.) {}
 
 bool Edge::operator==(const Edge &other) const {
     return this->node_pair.first == other.node_pair.first && this->node_pair.second == other.node_pair.second;
 }
 
 string Edge::repr() const {
-    return this->node_pair.first + "\t" + this->node_pair.second;
+    string r;
+    r = this->node_pair.first + "\t" + this->node_pair.second;
+    return r;
 }
+
+string Edge::to_string() const {
+    string r = this->repr();
+    r = r + "\t" + std::to_string(this->value) + "\t" + std::to_string(this->weight);
+    return r;
+}
+
+double Edge::get_value() const { return value; }
+void Edge::set_value(double v) { value = v; }
+double Edge::get_weight() const { return weight; }
+void Edge::set_weight(double w) { weight = w; }
 
 bool Nodes::exists(const Node& node) const {
     return nodes.find(node) != nodes.end();
@@ -39,12 +57,14 @@ void Nodes::add_node(const Node& node) {
     if (!exists(node)) {
         nodes[node] = NodeDescription();
         nodes_list.push_back(node);
+        is_sorted = false;
     }
 }
 unsigned int Nodes::size() const {return nodes.size();}
 void Nodes::increment_degree(Node n) {
     if (exists(n)){
         nodes[n].increment_degree();
+        is_sorted = false;
     }
 }
 
@@ -62,6 +82,23 @@ void Nodes::set_description(const Node &node, const NodeDescription &d) {
     nodes[node] = d;
 }
 
+class NodesDegreeComparator {
+private:
+    Nodes nodes;
+public:
+    NodesDegreeComparator(Nodes n) : nodes(n) {}
+    bool operator() (const Node& lhs, const Node& rhs) {
+        return nodes.get_description(lhs).get_degree() > nodes.get_description(rhs).get_degree();
+    }
+};
+
+void Nodes::sort_by_degree() {
+    if (!is_sorted) {
+        std::sort(nodes_list.begin(), nodes_list.end(), NodesDegreeComparator(*this));
+        is_sorted = true;
+    }
+}
+
 NodeDescription::NodeDescription() : degree(0), component_id(-1) {}
 unsigned int NodeDescription::get_degree() {return degree;}
 void NodeDescription::increment_degree() {degree++;}
@@ -72,10 +109,17 @@ Coordinates NodeDescription::get_coordinates() const {return coordinates;}
 void NodeDescription::set_coordinates(const Coordinates & c) { coordinates = c; }
 
 const Nodes& Graph::get_nodes() const {return nodes;}
+const Nodes& Graph::get_sorted_nodes() {
+    nodes.sort_by_degree();
+    return nodes;
+}
 
 unsigned int Graph::number_of_nodes() const {
     return nodes.size();
 }
+
+const Edges& Graph::get_edges() const { return edges; }
+
 unsigned int Graph::number_of_edges() const {
     return edges.size();
 }
@@ -136,6 +180,7 @@ set<Node> Graph::core_nodes(double core_exponent=0.5) const {
 }
 
 bool Graph::has_node(const Node &node) const { return nodes.exists(node); }
+bool Graph::has_edge(const Edge &edge) const { return edges.find(edge) != edges.end(); }
 
 NodeDescription Graph::get_node_description(const Node &node) const {
     return nodes.get_description(node);

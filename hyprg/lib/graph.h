@@ -5,7 +5,6 @@
 #ifndef HYPRG_GRAPH_H
 #define HYPRG_GRAPH_H
 
-#endif //HYPRG_GRAPH_H
 #include <string>
 #include <vector>
 #include <utility>
@@ -27,10 +26,18 @@ typedef vector<double> Coordinates;
 class Edge {
 private:
     pair<Node, Node> node_pair;
+    double value;  // weight of edge
+    double weight; // for SGD-like optimization
 public:
+    Edge(string, string, double, double);
     Edge(string, string);
     bool operator==(const Edge& other) const;
     string repr() const;
+    string to_string() const;
+    double get_value() const;
+    void set_value(double);
+    double get_weight() const;
+    void set_weight(double);
 };
 
 struct hashEdge {
@@ -39,6 +46,8 @@ struct hashEdge {
         return hasher(e.repr());
     }
 };
+
+typedef unordered_set<Edge, hashEdge> Edges;
 
 class NodeDescription {
 private:
@@ -63,7 +72,9 @@ private:
     NodeMap nodes;
     typedef vector<Node> NodeContainter;
     NodeContainter nodes_list;
+    bool is_sorted;
 public:
+    Nodes() {is_sorted = false;}
     void add_node(const Node&);
     bool exists(const Node&) const;
     void increment_degree(Node);
@@ -73,21 +84,41 @@ public:
     void set_description(const Node &, const NodeDescription &);
 
     typedef NodeContainter::const_iterator const_iterator;
-    const_iterator begin() const {return nodes_list.begin();}
-    const_iterator end() const {return nodes_list.end();}
+    const_iterator begin() const {
+        return nodes_list.begin();
+    }
+    const_iterator end() const {
+        return nodes_list.end();
+    }
+
+    void sort_by_degree();
+    /*
+    typedef NodeContainter::iterator iterator;
+    iterator begin_sorted() {
+        sort_by_degree();
+        return nodes_list.begin();
+    }
+    iterator end_sorted() {
+        sort_by_degree();
+        return nodes_list.end();
+    }
+     */
 };
 
 class Graph {
 private:
-    unordered_set<Edge, hashEdge> edges;
+    Edges edges;
     //NodeMap nodes;
     Nodes nodes;
     AdjMap adj_map;
 public:
     const Nodes& get_nodes() const;
+    const Nodes& get_sorted_nodes();
+    const Edges& get_edges() const;
     unsigned int number_of_nodes() const;
-    bool has_node(const Node&) const;
     unsigned int number_of_edges() const;
+    bool has_node(const Node&) const;
+    bool has_edge(const Edge&) const;
 
     void add_node(const string&);
     void add_edge(const string&, const string&);
@@ -131,3 +162,4 @@ public:
     int get_components_count();
     int max_component_id();
 };
+#endif //HYPRG_GRAPH_H
