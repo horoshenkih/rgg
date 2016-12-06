@@ -8,42 +8,31 @@
 
 #include "lib/utils.h"
 #include "lib/pair_generator.h"
+#include "lib/embedding_model.h"
 
 using std::cout;
 using std::endl;
 using std::string;
 using std::ofstream;
 
-void describe_graph(Graph &G) {
-    cout << "Number of nodes: " << G.number_of_nodes() << endl;
-    cout << "Number of edges: " << G.number_of_edges() << endl;
-
-    cout << "Find components" << endl;
-    Components cc(G);
-    cout << "Number of components: " << cc.get_components_count() << endl;
-    /*
-    for (const auto &n: G.get_sorted_nodes()) {
-        int cid = cc.node_component_id(n);
-        cout << n << "\t" << cid << "\t" << cc.component_size(cid) << "\t" << G.get_node_description(n).get_degree() << endl;
-    }
-     */
-    int max_component_id = cc.max_component_id();
-    cout << "Max component: " << max_component_id << endl;
-    cout << "Max component size: " << cc.component_size(max_component_id) << endl;
-}
-
-void fit(Graph *G) {
-    cout << "in fit!" << endl;
+PoincareModel fit(Graph *G) {
     // construct connected (TODO!) core
     const double core_exponent = 0.5;
     set<Node> core = G->core_nodes(core_exponent);
     cout << "Core size: " << core.size() << endl;
     cout << "Is core subgraph connected? " << G->subgraph(core)->is_connected() << endl;
+    PoincareModel embedding(*G);
+    return embedding;
+
+    /*
     PairGenerator pair_generator(*G);
     cout << "Pairs:" << endl;
     for (auto e : pair_generator.get_pairs()) {
         cout << e.to_string() << endl;
     }
+    */
+
+
     /*
     cout << "Core nodes:" << endl;
     for (auto cn : core) {
@@ -68,6 +57,24 @@ void fit(Graph *G) {
      */
 }
 
+void describe_graph(Graph &G) {
+    cout << "Number of nodes: " << G.number_of_nodes() << endl;
+    cout << "Number of edges: " << G.number_of_edges() << endl;
+
+    cout << "Find components" << endl;
+    Components cc(G);
+    cout << "Number of components: " << cc.get_components_count() << endl;
+    /*
+    for (const auto &n: G.get_sorted_nodes()) {
+        int cid = cc.node_component_id(n);
+        cout << n << "\t" << cid << "\t" << cc.component_size(cid) << "\t" << G.get_node_description(n).get_degree() << endl;
+    }
+     */
+    int max_component_id = cc.max_component_id();
+    cout << "Max component: " << max_component_id << endl;
+    cout << "Max component size: " << cc.component_size(max_component_id) << endl;
+}
+
 int main(int argc, char **argv) {
     std::srand(42);
     string graph_file;
@@ -83,8 +90,6 @@ int main(int argc, char **argv) {
     out_prefix = command_line[1];
 
     string out_embeddings = out_prefix + "-" + "embeddings.txt";
-    ofstream out_embeddings_file;
-    out_embeddings_file.open(out_embeddings);
 
     cout << "Read graph from: " << graph_file << endl;
     Graph G = read_graph_from_file(graph_file.c_str());
@@ -98,8 +103,10 @@ int main(int argc, char **argv) {
     cout << "==========" << endl << endl;
 
     cout << "Fit" << endl;
-    fit(subG);
+    PoincareModel embedding = fit(subG);
     cout << "Save embedings to " << out_embeddings << endl;
+    write_embedding_to_file(embedding, out_embeddings.c_str());
+    /*
     int n = subG->number_of_nodes();
     for (auto v : subG->get_nodes()) {
         NodeDescription d = subG->get_node_description(v);
@@ -115,7 +122,6 @@ int main(int argc, char **argv) {
         c = d.get_coordinates();
         out_embeddings_file << v << "\t" << c[0] << "\t" << c[1] << endl;
     }
-    out_embeddings_file.close();
-
+*/
     return 0;
 }

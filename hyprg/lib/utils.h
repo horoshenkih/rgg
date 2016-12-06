@@ -11,8 +11,10 @@
 #include <ctime>
 
 #include "graph.h"
+#include "embedding_model.h"
 
 Graph read_graph_from_file(const char *filename);
+void write_embedding_to_file(const EmbeddingModel&, const char*);
 
 //int random_i(int i) { return std::rand() % i; }
 template <typename T> void shuffle_vector(vector<T> &vec) {
