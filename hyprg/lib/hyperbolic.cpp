@@ -24,6 +24,9 @@ std::vector<double> grad_distance(double r1, double phi1, double r2, double phi2
     gradients[1] = sinh(r1) * sinh(r2) * sin(phi1 - phi2);
     gradients[2] = cosh(r1) * sinh(r2) - sinh(r1) * cosh(r2) * cos(phi1 - phi2);
     gradients[3] = -gradients[1];
+    for (int i = 0; i < gradients.size(); ++i) {
+        gradients[i] *= normalizer;
+    }
 
     return gradients;
 }

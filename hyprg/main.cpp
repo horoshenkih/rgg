@@ -24,12 +24,13 @@ PoincareModel fit(Graph *G) {
     cout << "Core size: " << core.size() << endl;
     cout << "Is core subgraph connected? " << G->subgraph(core)->is_connected() << endl;
     cout << "Prepare pairs generator" << endl;
-    PairGenerator pair_generator(G);
+    PairGenerator pair_generator(G, 5., 5., 5.);
     cout << "Prepare embedding model" << endl;
     PoincareModel embedding(G);
     LogLoss loss_function;
-    SGD optimizer(0.1, 3, true);
+    SGD optimizer(0.01, 100, true);
 
+    cout << "Start embedding optimization" << endl;
     optimizer.optimize_embedding(&embedding, &loss_function, &pair_generator);
     return embedding;
 

@@ -2,6 +2,7 @@
 // Created by serkh on 12/5/16.
 //
 #include <iostream>
+#include <algorithm>
 #include "pair_generator.h"
 #include "utils.h"
 
@@ -69,10 +70,10 @@ PairGenerator::PairGenerator(Graph* G, double ratio_to_second, double ratio_betw
 
         // 3.random
         int n_random_vertices = 0;
-        int max_n_random_vertices = static_cast<int>(ratio_random * degree);
+        auto all_nodes = G->get_nodes();
+        int max_n_random_vertices = std::min(static_cast<int>(ratio_random * degree), static_cast<int>(all_nodes.size()));
         vector<Node> random_vertices;
         random_vertices.resize(max_n_random_vertices);
-        auto all_nodes = G->get_nodes();
         n_random_elements(all_nodes.begin(), all_nodes.end(), random_vertices.begin(), max_n_random_vertices);
         for (auto rand_n : random_vertices) {
             if (rand_n == n) {
