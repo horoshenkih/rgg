@@ -5,10 +5,10 @@
 #include "pair_generator.h"
 #include "utils.h"
 
-PairGenerator::PairGenerator(Graph &G, double ratio_to_second, double ratio_between_first, double ratio_random) {
+PairGenerator::PairGenerator(Graph* G, double ratio_to_second, double ratio_between_first, double ratio_random) {
     // edges
     Edges current_pairs;
-    for (Edge e : G.get_edges()) {
+    for (Edge e : G->get_edges()) {
         e.set_value(1.);
         e.set_weight(1.);
         //pairs.push_back(e);
@@ -16,13 +16,19 @@ PairGenerator::PairGenerator(Graph &G, double ratio_to_second, double ratio_betw
     }
     // nedges
     int total_nedges = 0;
-    for (Node n : G.get_sorted_nodes()) {
-        int degree = G.get_node_description(n).get_degree();
+    int z_i = 0;
+    auto sorted_nodes = G->get_sorted_nodes();
+    for (Node n : sorted_nodes) {
+        z_i++;
+        if (!(z_i % 100)) {
+            std::cout << "DEBUG: processed " << z_i << " nodes" << std::endl;
+        }
+        int degree = G->get_node_description(n).get_degree();
         // 1. to second
-        auto first_neigh = G.neighbors(n);
+        auto first_neigh = G->neighbors(n);
         vector<Node> second_neigh;
         for (Node neigh1 : first_neigh) {
-            for (Node neigh2 : G.neighbors(neigh1)) {
+            for (Node neigh2 : G->neighbors(neigh1)) {
                 if (neigh2 != n) {
                     second_neigh.push_back(neigh2);
                 }
@@ -71,7 +77,7 @@ PairGenerator::PairGenerator(Graph &G, double ratio_to_second, double ratio_betw
         int max_n_random_vertices = static_cast<int>(ratio_random * degree);
         vector<Node> random_vertices;
         random_vertices.resize(max_n_random_vertices);
-        auto all_nodes = G.get_nodes();
+        auto all_nodes = G->get_nodes();
         n_random_elements(all_nodes.begin(), all_nodes.end(), random_vertices.begin(), max_n_random_vertices);
         for (auto rand_n : random_vertices) {
             if (rand_n == n) {
@@ -91,7 +97,7 @@ PairGenerator::PairGenerator(Graph &G, double ratio_to_second, double ratio_betw
     }
     double non_edge_weight = 1.;
     if (total_nedges > 0) {
-        non_edge_weight = static_cast<double>(G.number_of_edges()) / total_nedges;
+        non_edge_weight = static_cast<double>(G->number_of_edges()) / total_nedges;
     }
     // copy
     pairs = vector<Edge>(current_pairs.begin(), current_pairs.end());

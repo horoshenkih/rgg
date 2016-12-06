@@ -22,10 +22,10 @@ PoincareModel fit(Graph *G) {
     cout << "Core size: " << core.size() << endl;
     cout << "Is core subgraph connected? " << G->subgraph(core)->is_connected() << endl;
     PoincareModel embedding(*G);
+    PairGenerator pair_generator(G);
     return embedding;
 
     /*
-    PairGenerator pair_generator(*G);
     cout << "Pairs:" << endl;
     for (auto e : pair_generator.get_pairs()) {
         cout << e.to_string() << endl;
