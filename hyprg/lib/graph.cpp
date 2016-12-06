@@ -49,6 +49,12 @@ double Edge::get_value() const { return value; }
 void Edge::set_value(double v) { value = v; }
 double Edge::get_weight() const { return weight; }
 void Edge::set_weight(double w) { weight = w; }
+pair<Node, Node> Edge::get_node_pair() const {
+    Node n1(node_pair.first);
+    Node n2(node_pair.second);
+
+    return pair<Node, Node>{n1, n2};
+}
 
 bool Nodes::exists(const Node& node) const {
     return nodes.find(node) != nodes.end();
@@ -84,17 +90,17 @@ void Nodes::set_description(const Node &node, const NodeDescription &d) {
 
 class NodesDegreeComparator {
 private:
-    Nodes nodes;
+    Nodes* nodes;
 public:
-    NodesDegreeComparator(Nodes n) : nodes(n) {}
+    NodesDegreeComparator(Nodes* n) : nodes(n) {}
     bool operator() (const Node& lhs, const Node& rhs) {
-        return nodes.get_description(lhs).get_degree() > nodes.get_description(rhs).get_degree();
+        return nodes->get_description(lhs).get_degree() > nodes->get_description(rhs).get_degree();
     }
 };
 
 void Nodes::sort_by_degree() {
     if (!is_sorted) {
-        std::sort(nodes_list.begin(), nodes_list.end(), NodesDegreeComparator(*this));
+        std::sort(nodes_list.begin(), nodes_list.end(), NodesDegreeComparator(this));
         is_sorted = true;
     }
 }

@@ -38,6 +38,7 @@ public:
     void set_value(double);
     double get_weight() const;
     void set_weight(double);
+    pair<Node, Node> get_node_pair() const;
 };
 
 struct hashEdge {

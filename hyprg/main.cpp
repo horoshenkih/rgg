@@ -9,6 +9,8 @@
 #include "lib/utils.h"
 #include "lib/pair_generator.h"
 #include "lib/embedding_model.h"
+#include "lib/loss_function.h"
+#include "lib/optimization.h"
 
 using std::cout;
 using std::endl;
@@ -21,8 +23,14 @@ PoincareModel fit(Graph *G) {
     set<Node> core = G->core_nodes(core_exponent);
     cout << "Core size: " << core.size() << endl;
     cout << "Is core subgraph connected? " << G->subgraph(core)->is_connected() << endl;
-    PoincareModel embedding(*G);
+    cout << "Prepare pairs generator" << endl;
     PairGenerator pair_generator(G);
+    cout << "Prepare embedding model" << endl;
+    PoincareModel embedding(G);
+    LogLoss loss_function;
+    SGD optimizer(0.1, 3, true);
+
+    optimizer.optimize_embedding(&embedding, &loss_function, &pair_generator);
     return embedding;
 
     /*

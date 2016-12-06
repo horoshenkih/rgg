@@ -16,13 +16,8 @@ PairGenerator::PairGenerator(Graph* G, double ratio_to_second, double ratio_betw
     }
     // nedges
     int total_nedges = 0;
-    int z_i = 0;
     auto sorted_nodes = G->get_sorted_nodes();
     for (Node n : sorted_nodes) {
-        z_i++;
-        if (!(z_i % 100)) {
-            std::cout << "DEBUG: processed " << z_i << " nodes" << std::endl;
-        }
         int degree = G->get_node_description(n).get_degree();
         // 1. to second
         auto first_neigh = G->neighbors(n);
@@ -111,3 +106,4 @@ PairGenerator::PairGenerator(Graph* G, double ratio_to_second, double ratio_betw
 }
 
 const WeightedPairs& PairGenerator::get_pairs() const { return pairs; }
+void PairGenerator::shuffle_pairs() { shuffle_vector(pairs); }

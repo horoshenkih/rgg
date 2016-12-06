@@ -15,6 +15,7 @@ private:
 public:
     PairGenerator(Graph* G, double ratio_to_second=2., double ratio_between_first=1., double ratio_random=1.);
     const WeightedPairs& get_pairs() const;
+    void shuffle_pairs();
 };
 
 
