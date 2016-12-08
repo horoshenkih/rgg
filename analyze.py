@@ -68,7 +68,7 @@ def main():
     n = graph.number_of_nodes()
 
     # analyze degree distribution
-    deg = [d[1] for d in graph.degree()]
+    deg = graph.degree().values()# [d[1] for d in graph.degree()]
     n_isolated_vertices = len([d for d in deg if d == 0])
     deg_dist = [i for i in Counter(deg).iteritems() if i[0] > 0]
     degs, counts = zip(*deg_dist)

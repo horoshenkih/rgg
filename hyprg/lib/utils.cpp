@@ -42,3 +42,10 @@ void write_embedding_to_file(const EmbeddingModel& embedding, const char *filena
     }
     out_embeddings_file.close();
 }
+
+double generate_random_uniform(double a, double b) {
+    if (b <= a) {
+        return a;
+    }
+    return a + (rand() / (double(RAND_MAX) / (b - a)));
+}

@@ -15,6 +15,7 @@
 
 Graph read_graph_from_file(const char *filename);
 void write_embedding_to_file(const EmbeddingModel&, const char*);
+double generate_random_uniform(double, double);
 
 //int random_i(int i) { return std::rand() % i; }
 template <typename T> void shuffle_vector(vector<T> &vec) {

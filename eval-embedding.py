@@ -11,7 +11,7 @@ from sklearn.neighbors import BallTree
 
 from lib.graph import read_graph_from_file, read_embeddings_from_file, distance, make_edge
 
-def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_max_vertices=1000, gr_max_pairs=10000):
+def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_max_vertices=1000, gr_max_pairs=10000, eval_core=False, core_exponent=0.5):
     "evaluate quality of embeddings compared with real elge set"
     report = []
 
@@ -24,7 +24,13 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_m
     # use BallTree for efficient graph construction
     print "construct BallTree"
     vertices = list(true_graph.nodes())
+    edges = list(true_graph.edges())
     n = len(vertices)
+    if eval_core:
+        vertices = [v for v in vertices if true_graph.degree(v) >= n**core_exponent]
+        true_graph = true_graph.subgraph(vertices)
+        edges = list(true_graph.edges())
+
     embeddings_array = np.array([embeddings[v] for v in vertices])
     bt = BallTree(embeddings_array, metric=distance)
 
@@ -44,7 +50,7 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_m
         for v_i, v in enumerate(cda_vertices):
             start = time.time()
             degree = degrees[v]
-            dist, ind = bt.query(embeddings[v], k=degree+1)  # one of neighbors is vertex inself
+            dist, ind = bt.query(np.array(embeddings[v]).reshape(1,-1), k=degree+1)  # one of neighbors is vertex inself
             neigh = [vertices[i] for i in ind[0].tolist() if vertices[i] != v]
             for ne in neigh:
                 if make_edge(v, ne) in edges:
@@ -141,6 +147,8 @@ def main():
     parser.add_argument('--cda-max-vertices', type=int, default=1000)
     parser.add_argument('--gr', action='store_true', help='evaluate greedy routing')
     parser.add_argument('--gr-max-pairs', type=int, default=10000)
+    parser.add_argument('--core', action='store_true', help='evaluate core')
+    parser.add_argument('--core-exponent', type=float, help='core exponent', default=0.5)
     args = parser.parse_args()
 
     vertices, edges = read_graph_from_file(args.graph_file)
@@ -152,7 +160,8 @@ def main():
     print "Evaluate embeddings"
     report = evaluate_embeddings(embeddings, edges,
         cda=args.cda, cda_max_vertices=args.cda_max_vertices,
-        greedy_routing=args.gr, gr_max_pairs=args.gr_max_pairs
+        greedy_routing=args.gr, gr_max_pairs=args.gr_max_pairs,
+        eval_core=args.core, core_exponent=args.core_exponent
     )
 
     print 'report'

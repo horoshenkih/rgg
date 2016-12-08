@@ -11,10 +11,12 @@
 typedef vector<Edge> WeightedPairs;
 class PairGenerator {
 private:
+    Graph* G;
     WeightedPairs pairs;
 public:
-    PairGenerator(Graph* G, double ratio_to_second=2., double ratio_between_first=1., double ratio_random=1.);
+    PairGenerator(Graph* G);
     const WeightedPairs& get_pairs() const;
+    void generate_pairs(double ratio_to_second=2., double ratio_between_first=1., double ratio_random=1.);
     void shuffle_pairs();
 };
 

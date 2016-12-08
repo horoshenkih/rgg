@@ -32,6 +32,8 @@ protected:
     double EPS;
 public:
     SmoothEdgeLoss();
+    void set_beta(double new_beta) {beta = new_beta;}
+    double get_beta() { return beta; }
     virtual double elementary_loss(double t, double p) const = 0;
     virtual double elementary_loss_gradient(double t, double p) const = 0;
     double loss(const Edge&, const DistanceInfo&) const;
