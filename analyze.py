@@ -35,6 +35,8 @@ def main():
     parser.add_argument('--layout', help='graph layout (no, polar, 2d)', default='polar')
     parser.add_argument('--no-edges', action='store_true', help='do not plot graph edges')
     parser.add_argument('--n-vertices', type=int, help='plot number of vertices closest to the origin')
+    parser.add_argument('--core', action='store_true', help='plot only core vertices')
+    parser.add_argument('--core_exponent', type=float, default=0.5)
 
     parser.add_argument('--pd', action='store_true', help='plot degree distribution')
 
@@ -132,6 +134,10 @@ def main():
             if args.n_vertices:
                 vert.sort(key=lambda x: embeddings[x][0])
                 vert = vert[:args.n_vertices]
+            elif args.core:
+                n = graph.number_of_nodes()
+                vert = [v for v in vert if graph.degree(v) >= n**args.core_exponent]
+                print "Number of core vertices: {}".format(len(vert))
             pairs = [embeddings[v] for v in vert]
             r, phi = zip(*pairs)
             if args.deg:
