@@ -73,6 +73,8 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_m
 
         total_distribution = defaultdict(int)
         success_distribution = defaultdict(int)
+        complete_fails_distribution = defaultdict(int)
+        all_path_length_pairs = defaultdict(int)
         for i, pair in enumerate(random_pairs):
             src, dst = pair
             # best path
@@ -102,18 +104,23 @@ def evaluate_embeddings(embeddings, edges, cda=True, greedy_routing=False, cda_m
             if path_length == best_path_length:
                 success_distribution[0] += 1
                 success_distribution[best_path_length] += 1
+            if np.isnan(path_length):
+                complete_fails_distribution[0] += 1
+                complete_fails_distribution[best_path_length] += 1
+            all_path_length_pairs[(best_path_length, path_length)] += 1
         all_success = success_distribution[0]
+        all_complete_fails = complete_fails_distribution[0]
         all_total = total_distribution[0]
         all_ratio = float(all_success) / all_total * 100
-        print "Total: {} / {} ({:.2f} %)".format(all_success, all_total, all_ratio)
+        print "Complete fails: {} / {} ({:.2f} %)".format(all_complete_fails, all_total, float(all_complete_fails) / all_total * 100)
+        print "Success: {} / {} ({:.2f} %)".format(all_success, all_total, all_ratio)
         for pl in sorted(set(total_distribution.keys()) | set(success_distribution.keys())):
             if pl == 0:
                 continue
             total = total_distribution.get(pl, 0)
             success = success_distribution.get(pl, 0)
             ratio = float(success) / total * 100
-            print "Path length = {}: {} / {} ({:.2f} %)".format(pl, success, total, ratio)
-
+            print "Success at path length = {}: {} / {} ({:.2f} %)".format(pl, success, total, ratio)
     if False:
         # depends on R, bad for subgraphs -- not used
         n = len(vertices)
