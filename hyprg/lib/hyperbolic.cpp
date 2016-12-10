@@ -6,14 +6,25 @@
 #include "hyperbolic.h"
 
 double cosh_distance(double r1, double phi1, double r2, double phi2) {
-    return cosh(r1) * cosh(r2) - sinh(r1) * sinh(r2) * cos(phi1 - phi2);
+    if (r1 < 0 || r2 < 0) {
+        throw std::domain_error("negative radius in hyperbolic::cosh_distance!");
+    }
+    double cd = cosh(r1) * cosh(r2) - sinh(r1) * sinh(r2) * cos(phi1 - phi2);
+    cd = std::max(1., cd);
+    return cd;
 }
 
 double distance(double r1, double phi1, double r2, double phi2) {
+    if (r1 < 0 || r2 < 0) {
+        throw std::domain_error("negative radius in hyperbolic::distance!");
+    }
     return acosh(cosh_distance(r1, phi1, r2, phi2));
 }
 
 std::vector<double> grad_distance(double r1, double phi1, double r2, double phi2) {
+    if (r1 < 0 || r2 < 0) {
+        throw std::domain_error("negative radius in hyperbolic::grad_distance!");
+    }
     double cd = cosh_distance(r1, phi1, r2, phi2);
     std::vector<double> gradients{0.,0.,0.,0.};
     if (fabs(cd - 1) < 1e-15) {
@@ -67,10 +78,12 @@ Coordinates poincare_average(vector<Coordinates>& coords, vector<double>& weight
         B += sinh(r_i) * cos(phi_i) * w_i;
         rnorm += cosh(r_i) * w_i;
     }
-    if (fabs(A) < 1e-10 and fabs(B) < 1e-10) {
+    double phi = atan2(A, B);
+    if (std::isnan(phi)) {
         return Coordinates{0,0};
     }
-    double phi = atan2(A, B);
-    double r = atanh((A * sin(phi) + B * cos(phi)) / rnorm);
+    double tanh_r = (A * sin(phi) + B * cos(phi)) / rnorm;
+    tanh_r = std::max(-0.999, std::min(0.999, tanh_r));
+    double r = atanh(tanh_r);
     return Coordinates{r, phi};
 }
