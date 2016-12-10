@@ -80,9 +80,9 @@ double PoincareModel::generate_radius(const Node &node) const {
     unsigned int deg = d.get_degree();
     //double r = generate_random_uniform(0, 2. * log(double(n) / deg));
     double r = 2. * log(double(n) / deg);
-    double r_jitter = 2./sqrt(deg);
+    double r_jitter = std::min(2./sqrt(deg), r - 1./n);
     r += generate_random_uniform(-r_jitter, r_jitter);
-    return std::min(r, radius);
+    return std::max(0., std::min(r, radius));
 }
 
 Coordinates PoincareModel::generate_random_coordinates(const Node &node) const {

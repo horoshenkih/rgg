@@ -11,7 +11,13 @@ PairGenerator::PairGenerator(Graph* G) {
 }
 
 const WeightedPairs& PairGenerator::get_pairs() const { return pairs; }
-void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_first, double ratio_random) {
+void PairGenerator::generate_pairs(
+    double ratio_to_second,
+    double ratio_between_first,
+    double ratio_first_second,
+    double ratio_between_second,
+    double ratio_random
+) {
     // edges
     Edges current_pairs;
     for (Edge e : G->get_edges()) {
@@ -23,6 +29,8 @@ void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_
     // nedges
     int total_nedges = 0;
     auto sorted_nodes = G->get_sorted_nodes();
+    //vector<Node> reversed_nodes(sorted_nodes.begin(), sorted_nodes.end());
+    //std::reverse(reversed_nodes.begin(), reversed_nodes.end());
     for (Node n : sorted_nodes) {
         int degree = G->get_node_description(n).get_degree();
         // 1. to second
@@ -80,9 +88,12 @@ void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_
         for (auto second_n : second_neigh) {
             for (auto first_n : first_neigh) {
                 if (first_n == second_n) { continue; }
+                if (n_fs > degree * ratio_first_second) {
+                    break;
+                }
                 Edge fs(first_n, second_n);
                 fs.set_value(0.);
-                fs.set_weight(0.5);
+                //fs.set_weight(0.5);
                 if (current_pairs.find(fs) == current_pairs.end()) {
                     current_pairs.insert(fs);
                     n_fs++;
@@ -91,9 +102,12 @@ void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_
             }
             for (auto second_second_n : second_neigh) {
                 if (second_second_n == second_n) { continue; }
+                if (n_ss > degree * ratio_between_second) {
+                    break;
+                }
                 Edge ss(second_n, second_second_n);
                 ss.set_value(0.);
-                ss.set_weight(0.5);
+                //ss.set_weight(0.5);
                 if (current_pairs.find(ss) == current_pairs.end()) {
                     current_pairs.insert(ss);
                     n_ss++;
@@ -111,6 +125,7 @@ void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_
         random_vertices.resize(max_n_random_vertices);
         n_random_elements(all_nodes.begin(), all_nodes.end(), random_vertices.begin(), max_n_random_vertices);
         for (auto rand_n : random_vertices) {
+        //for (auto rand_n : sorted_nodes) {
             if (rand_n == n) {
                 continue;
             }
@@ -133,7 +148,7 @@ void PairGenerator::generate_pairs(double ratio_to_second, double ratio_between_
         non_edge_weight = static_cast<double>(G->number_of_edges()) / total_nedges;
     }
     // EXPERIMENT
-    //non_edge_weight /= 2;
+    non_edge_weight /= 4;
     // copy
     pairs = vector<Edge>(current_pairs.begin(), current_pairs.end());
     // set weights
