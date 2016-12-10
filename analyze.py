@@ -27,6 +27,8 @@ def main():
     parser.add_argument('--deg', action='store_true', help='angle in degrees, not radians')
     parser.add_argument('--annotate', action='store_true', help='annotate vertices')
 
+    parser.add_argument('--components', action='store_true', help='analyze components')
+
     parser.add_argument('--clustering', help='compute clustering coefficients', action='store_true')
 
     parser.add_argument('--diameter', help='compute diameter', action='store_true')
@@ -46,7 +48,8 @@ def main():
     else:
         graph_f = sys.stdin
 
-    print "read graph"
+    filename = args.f.split('/')[-1].split('.')[0]
+    print "read graph" + " " + filename
     graph = nx.Graph()
     for i_line, line in enumerate(graph_f):
         if line.startswith('#'):
@@ -77,11 +80,12 @@ def main():
     freqs = [float(c) / n for c in counts]
 
     # components
-    print "n isolated vertices: {}".format(n_isolated_vertices)
-    components = sorted(nx.connected_component_subgraphs(graph), key=len, reverse=True)
-    print "n components: {}".format(len(components))
-    print "n nontrivial components: {}".format(len(components) - n_isolated_vertices)
-    print "largest compoment size: {}".format(len(components[0]))
+    if args.components:
+        print "n isolated vertices: {}".format(n_isolated_vertices)
+        components = sorted(nx.connected_component_subgraphs(graph), key=len, reverse=True)
+        print "n components: {}".format(len(components))
+        print "n nontrivial components: {}".format(len(components) - n_isolated_vertices)
+        print "largest compoment size: {}".format(len(components[0]))
 
     # clustering
     if args.clustering:
@@ -107,7 +111,7 @@ def main():
     if args.pd:
         plot_idx = plot2idx['degrees']
         ax_deg = plt.subplot(1, n_plots, plot_idx)
-        plt.title('Degree distribution')
+        plt.title('Degree distribution of ' + filename)
         ax_deg.loglog(degs, freqs, marker='o', linewidth=0)
         # fit in logarithmic scale
         # truncate 10% boundary degrees

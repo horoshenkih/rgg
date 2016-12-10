@@ -6,6 +6,8 @@
 #include <cmath>
 #include <map>
 #include <exception>
+#include <ctime>
+
 #include "optimization.h"
 #include "hyperbolic.h"
 
@@ -126,6 +128,12 @@ Coordinates __generate_new_coordinates_pivot(const Node& node, NodeStates& ns, E
         new_coords = embedding_model->generate_random_coordinates(node);
         new_coords[1] = avg[1];
     }
+    if (new_coords[0] < 0) {
+        throw std::domain_error("(in optimization, __generate_new_cordinates_pivot) generated point has negative radius!");
+    }
+    if (std::isnan(new_coords[1])) {
+        throw std::domain_error("(in optimization, __generate_new_cordinates_pivot) generated point angle is NaN!");
+    }
     return new_coords;
 }
 
@@ -140,12 +148,17 @@ void SGD::optimize_embedding(EmbeddingModel *embedding_model, SmoothEdgeLoss *lo
     double max_beta = 1 * log(n);
     double min_beta = 1 * log(n);
     loss_function->set_beta(max_beta);
-    double ratio_random = 1.; // 3
     if (verbose) {
         std::cout << "Generate pairs" << std::endl;
     }
-    pair_generator->generate_pairs(1,1,1,1,ratio_random); // 30,30,100,100
+    double ratio_to_second = 20.;
+    double ratio_between_first = 20.;
+    double ratio_first_second = 20.;
+    double ratio_between_second = 20.;
+    double ratio_random = 1.; // 3
+    pair_generator->generate_pairs(ratio_to_second,ratio_between_first,ratio_first_second,ratio_between_second,ratio_random); // 30,30,100,100
     for (int epoch=0; epoch < n_epoch; ++epoch) {
+        clock_t epoch_begin = std::clock();
         pair_generator->shuffle_pairs();
         if (verbose) {
             std::cout << "Epoch " << epoch+1 << " / " << n_epoch << std::endl;
@@ -191,18 +204,20 @@ void SGD::optimize_embedding(EmbeddingModel *embedding_model, SmoothEdgeLoss *lo
 
             if (node_update_count[nodepair.first].state == PROCESSING) {
             //if (node_update_count[nodepair.first].state == PROCESSING && node_update_count[nodepair.second].state != PENDING) {
-                embedding_model->set_node_embedding(nodepair.first,  Coordinates{std::max(1./double(n), x[0]), x[1]});
+                embedding_model->set_node_embedding(nodepair.first,  Coordinates{std::max(0., x[0]), x[1]});
                 node_update_count[nodepair.first].num_updates++;
             }
             if (node_update_count[nodepair.second].state == PROCESSING) {
             //if (node_update_count[nodepair.second].state == PROCESSING && node_update_count[nodepair.first].state != PENDING) {
-                embedding_model->set_node_embedding(nodepair.second, Coordinates{std::max(1./double(n), x[2]), x[3]});
+                embedding_model->set_node_embedding(nodepair.second, Coordinates{std::max(0., x[2]), x[3]});
                 node_update_count[nodepair.second].num_updates++;
             }
         }
         if (verbose) {
             std::cout << "Average loss: " << total_loss / N << std::endl;
-            /*
+            std::cout << "Elapsed time: " << float(std::clock() - epoch_begin) / CLOCKS_PER_SEC << std::endl;
+            std::cout << "===========" << std::endl;
+            // /*
             unsigned n_pending = 0;
             unsigned n_processing = 0;
             unsigned n_done = 0;
@@ -217,7 +232,7 @@ void SGD::optimize_embedding(EmbeddingModel *embedding_model, SmoothEdgeLoss *lo
             std::cout << "pending: " << n_pending << std::endl;
             std::cout << "processing: " << n_processing << std::endl;
             std::cout << "done: " << n_done << std::endl;
-             */
+            // */
         }
         double beta = loss_function->get_beta();
         loss_function->set_beta(min_beta + 0.9 *(beta-min_beta));
