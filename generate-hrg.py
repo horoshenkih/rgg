@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 import sys
 from argparse import ArgumentParser
@@ -32,7 +32,7 @@ def main():
     for e in g.edges():
         e_fmt = []
         for v in e:
-            e_fmt.append("{0:.5f},{1:.5f}".format(*v))
+            e_fmt.append("{0:.3f},{1:.3f}".format(*v))
         out_f.write(' '.join(e_fmt) + '\n')
 
 if __name__ == '__main__':

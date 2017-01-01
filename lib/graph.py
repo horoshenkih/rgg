@@ -34,7 +34,7 @@ class HypRG:
         self.R = 2 * np.log(self.n) + self.C
         assert self.R > 0
         self.angle_distribution = uniform(loc=0., scale=2 * np.pi).rvs
-        self.radius_distribution = hyp_radius_density(self.alpha, self.R)().rvs  # frozen
+        self.radius_distribution = hyp_radius_density(self.alpha, self.R).rvs  # frozen
 
         self.graph = nx.Graph()
         # generate vertices
