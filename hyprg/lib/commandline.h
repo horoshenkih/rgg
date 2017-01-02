@@ -45,7 +45,7 @@ public:
         descriptions[arg] = string(description);
     }
     void add_string_argument(const char * argname, string default_value, const char* description="") {
-        add_string_argument(argname);
+        add_string_argument(argname, description);
         set_value(argname, default_value);
     }
 
@@ -55,7 +55,7 @@ public:
         descriptions[arg] = string(description);
     }
     void add_int_argument(const char * argname, int default_value, const char* description="") {
-        add_int_argument(argname);
+        add_int_argument(argname, description);
         set_value(argname, default_value);
     }
 
@@ -65,7 +65,7 @@ public:
         descriptions[arg] = string(description);
     }
     void add_double_argument(const char * argname, double default_value, const char* description="") {
-        add_double_argument(argname);
+        add_double_argument(argname, description);
         set_value(argname, default_value);
     }
 
@@ -178,7 +178,16 @@ public:
     void print_help() {
         cout << "Optional arguments:" << endl;
         for (auto d : descriptions) {
-            cout << "\t" << val_to_search(d.first) << "\t\t\t" << d.second << endl;
+            string arg = d.first;
+            cout << "\t" << val_to_search(arg) << "\t\t\t" << d.second;
+            if (int_values.find(arg) != int_values.end()) {
+                cout << "\t(default=" << int_values[arg] << ")";
+            } else if (double_values.find(arg) != double_values.end()) {
+                cout << "\t(default=" << double_values[arg] << ")";
+            } else if (string_values.find(arg) != string_values.end()) {
+                cout << "\t(default=" << string_values[arg] << ")";
+            }
+            cout << endl;
         }
     }
 private:
