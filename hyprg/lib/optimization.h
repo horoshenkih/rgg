@@ -11,7 +11,7 @@
 
 class Optimizer {
 public:
-    virtual void optimize_embedding(EmbeddingModel*, SmoothEdgeLoss*, PairGenerator*, Graph*) = 0;
+    virtual void optimize_embedding(PoincareModel*, SmoothEdgeLoss*, PairGenerator*, Graph*) = 0;
 };
 
 class SGD : public Optimizer {
@@ -21,7 +21,7 @@ private:
     bool verbose;
 public:
     SGD(double learning_rate, unsigned n_epoch, bool verbose) : learning_rate(learning_rate), n_epoch(n_epoch), verbose(verbose) {};
-    void optimize_embedding(EmbeddingModel*, SmoothEdgeLoss*, PairGenerator*, Graph*);
+    void optimize_embedding(PoincareModel*, SmoothEdgeLoss*, PairGenerator*, Graph*);
 };
 
 #endif //HYPRG_OPTIMIZATION_H

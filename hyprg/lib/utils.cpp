@@ -28,6 +28,19 @@ Graph read_graph_from_file(const char *filename) {
     return G;
 }
 
+void read_poincare_embedding_from_file(PoincareModel* embedding, const char * filename) {
+    std::ifstream infile(filename);
+    string line;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        string v;
+        double r, phi;
+        if (!(iss >> v >> r >> phi)) { throw std::runtime_error("wrong line format"); }
+        embedding->set_node_embedding(Node(v), Coordinates{r, phi});
+    }
+    embedding->set_external_init(true);
+}
+
 void write_embedding_to_file(const EmbeddingModel& embedding, const char *filename) {
     std::ofstream out_embeddings_file;
     out_embeddings_file.open(filename);

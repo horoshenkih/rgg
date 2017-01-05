@@ -57,6 +57,7 @@ PoincareModel::PoincareModel(Graph* G) {
          */
         node_coordinates[v] = generate_random_coordinates(v);
     }
+    external_init = false;
 }
 
 DistanceInfo PoincareModel::get_edge_distance_info(const Edge &edge) const {
@@ -119,6 +120,9 @@ Coordinates PoincareModel::generate_random_coordinates(const Node &node, const N
     return Coordinates{r, phi};
      */
 }
+
+void PoincareModel::set_external_init(bool ei) { external_init = ei; }
+bool PoincareModel::is_external_init() {return external_init; }
 
 Coordinates PoincareModel::get_state_vector() const {
     // TODO

@@ -6,18 +6,24 @@
 #include "pair_generator.h"
 #include "utils.h"
 
-PairGenerator::PairGenerator(Graph* G) {
+PairGenerator::PairGenerator(
+        Graph* G,
+        double ratio_to_second,
+        double ratio_between_first,
+        double ratio_first_second,
+        double ratio_between_second,
+        double ratio_random
+) {
     this->G = G;
+    this->ratio_to_second = ratio_to_second;
+    this->ratio_between_first = ratio_between_first;
+    this->ratio_first_second = ratio_first_second;
+    this->ratio_between_second = ratio_between_second;
+    this->ratio_random = ratio_random;
 }
 
 const WeightedPairs& PairGenerator::get_pairs() const { return pairs; }
-void PairGenerator::generate_pairs(
-    double ratio_to_second,
-    double ratio_between_first,
-    double ratio_first_second,
-    double ratio_between_second,
-    double ratio_random
-) {
+void PairGenerator::generate_pairs() {
     // edges
     Edges current_pairs;
     for (Edge e : G->get_edges()) {

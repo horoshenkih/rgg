@@ -139,40 +139,48 @@ public:
     bool has_string_argument(const char* argname) {
         string arg = string(argname);
         if(registered_arguments.find(arg) == registered_arguments.end()) {
-            throw std::domain_error("unknown argument checked");
+            throw std::domain_error("unknown argument: " + arg);
         }
         return string_values.find(arg) != string_values.end();
     }
     bool has_int_argument(const char* argname) {
         string arg = string(argname);
         if(registered_arguments.find(arg) == registered_arguments.end()) {
-            throw std::domain_error("unknown argument checked");
+            throw std::domain_error("unknown argument: " + arg);
         }
         return int_values.find(arg) != int_values.end();
     }
     bool has_double_argument(const char* argname) {
         string arg = string(argname);
         if(registered_arguments.find(arg) == registered_arguments.end()) {
-            throw std::domain_error("unknown argument checked");
+            throw std::domain_error("unknown argument: " + arg);
         }
         return double_values.find(arg) != double_values.end();
     }
 
     bool get_bool_argument(const char * argname) {
-        string arg = string(argname);
-        return bool_values[arg];
+        if (has_bool_argument(argname)) {
+            string arg = string(argname);
+            return bool_values[arg];
+        }
     }
     int get_int_argument(const char* argname) {
-        string arg = string(argname);
-        return int_values[arg];
+        if (has_int_argument(argname)) {
+            string arg = string(argname);
+            return int_values[arg];
+        }
     }
     double get_double_argument(const char* argname) {
-        string arg = string(argname);
-        return double_values[arg];
+        if (has_double_argument(argname)) {
+            string arg = string(argname);
+            return double_values[arg];
+        }
     }
     string get_string_argument(const char* argname) {
-        string arg = string(argname);
-        return string_values[arg];
+        if (has_string_argument(argname)) {
+            string arg = string(argname);
+            return string_values[arg];
+        }
     }
 
     void print_help() {

@@ -67,9 +67,12 @@ class PoincareModel : public EmbeddingModel {
 private:
     Graph* G;
     double radius;
+    bool external_init;
 public:
     PoincareModel(Graph* G);
     void set_state_vector(const Coordinates &);
+    void set_external_init(bool);
+    bool is_external_init();
     Coordinates get_state_vector() const;
     DistanceInfo get_edge_distance_info(const Edge &) const;
     double generate_radius(const Node&) const;

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include "lib/commandline.h"
 #include "lib/utils.h"
 #include "lib/pair_generator.h"
 #include "lib/embedding_model.h"
@@ -17,52 +18,27 @@ using std::endl;
 using std::string;
 using std::ofstream;
 
-PoincareModel fit(Graph *G) {
+void fit(Graph *G, PoincareModel* embedding,
+         double learning_rate, int n_epoch,
+         double ratio_to_second,
+         double ratio_between_first,
+         double ratio_first_second,
+         double ratio_between_second,
+         double ratio_random
+) {
     // construct connected (TODO!) core
     const double core_exponent = 0.5;
     set<Node> core = G->core_nodes(core_exponent);
     cout << "Core size: " << core.size() << endl;
     cout << "Is core subgraph connected? " << G->subgraph(core)->is_connected() << endl;
-    PairGenerator pair_generator(G);
+    PairGenerator pair_generator(G, ratio_to_second, ratio_between_first, ratio_first_second, ratio_between_second, ratio_random);
     cout << "Prepare embedding model" << endl;
-    PoincareModel embedding(G);
+    //PoincareModel embedding(G);
     LogLoss loss_function;
-    SGD optimizer(0.1, 10, true); // learning rate 0.2
+    SGD optimizer(learning_rate, n_epoch, true);
 
     cout << "Start embedding optimization" << endl;
-    optimizer.optimize_embedding(&embedding, &loss_function, &pair_generator, G);
-    return embedding;
-
-    /*
-    cout << "Pairs:" << endl;
-    for (auto e : pair_generator.get_pairs()) {
-        cout << e.to_string() << endl;
-    }
-    */
-
-
-    /*
-    cout << "Core nodes:" << endl;
-    for (auto cn : core) {
-        cout << "\t" << cn << endl;
-    }
-
-    set<Node> fringe = G->fringe_nodes(core);
-    cout << "Fringe nodes:" << endl;
-    for (auto fn : fringe) {
-        cout << "\t" << fn << endl;
-    }
-
-    std::set_union(core.begin(), core.end(), fringe.begin(), fringe.end(), std::inserter(core, core.end()));
-    cout << "Core nodes 2:" << endl;
-    for (auto cn : core) {
-        cout << "\t" << cn << endl;
-    }
-    cout << "Fringe nodes 2:" << endl;
-    for (auto fn : G->fringe_nodes(core)) {
-        cout << "\t" << fn << endl;
-    }
-     */
+    optimizer.optimize_embedding(embedding, &loss_function, &pair_generator, G);
 }
 
 void describe_graph(Graph &G) {
@@ -84,18 +60,29 @@ void describe_graph(Graph &G) {
 }
 
 int main(int argc, char **argv) {
-    std::srand(42);
-    string graph_file;
-    string out_prefix;
+    CommandLine cl;
 
-    // parse options
-    vector<string> command_line(argv+1, argv+argc);
-    if (command_line.size() < 2) {
-        cout << "Usage: ./hyprg GRAPH_FILE OUT_PREFIX" << endl;
+    cl.add_string_argument("g", "(required) file with graph edges");
+    cl.add_string_argument("o", "(required) prefix of outfile");
+    cl.add_string_argument("e", "file with embeddings");
+    cl.add_double_argument("learning-rate", 0.2, "learning rate");
+    cl.add_double_argument("ratio-to-second", 2., "ratio of nedges to second neighbours");
+    cl.add_double_argument("ratio-between-first", 2., "ratio of nedges between first neighbours");
+    cl.add_double_argument("ratio-first-second", 1., "ratio of nedges between first and second neighbours");
+    cl.add_double_argument("ratio-between-second", 1., "ratio of nedges between second neighbours");
+    cl.add_double_argument("ratio-random", 1., "ratio of nedges to random vertices");
+    cl.add_int_argument("n-epoch", 20, "random seed");
+    cl.add_int_argument("seed", 42, "random seed");
+
+    cl.parse_arguments(argc, argv);
+    if (!cl.has_string_argument("g") or !cl.has_string_argument("o")) {
+        cout << "Some options not provided, run program with -h or --help" << endl;
         return 1;
     }
-    graph_file = command_line[0];
-    out_prefix = command_line[1];
+
+    std::srand(cl.get_int_argument("seed"));
+    string graph_file = cl.get_string_argument("g");
+    string out_prefix = cl.get_string_argument("o");
 
     string out_embeddings = out_prefix + "-" + "embeddings.txt";
 
@@ -111,25 +98,23 @@ int main(int argc, char **argv) {
     cout << "==========" << endl << endl;
 
     cout << "Fit" << endl;
-    PoincareModel embedding = fit(subG);
+    PoincareModel embedding(subG);
+    if (cl.has_string_argument("e")) {
+        cout << "Read initial ebmeddings from" << cl.get_string_argument("e") << endl;
+        read_poincare_embedding_from_file(&embedding, cl.get_string_argument("e").c_str());
+    }
+
+    double learning_rate = cl.get_double_argument("learning-rate");
+    int n_epoch = cl.get_int_argument("n-epoch");
+    double ratio_to_second = cl.get_double_argument("ratio-to-second");
+    double ratio_between_first = cl.get_double_argument("ratio-between-first");
+    double ratio_first_second = cl.get_double_argument("ratio-first-second");
+    double ratio_between_second = cl.get_double_argument("ratio-between-second");
+    double ratio_random = cl.get_double_argument("ratio-random");
+
+    fit(subG, &embedding, learning_rate, n_epoch, ratio_to_second, ratio_between_first, ratio_first_second, ratio_between_second, ratio_random);
     cout << "Save embedings to " << out_embeddings << endl;
     write_embedding_to_file(embedding, out_embeddings.c_str());
-    /*
-    int n = subG->number_of_nodes();
-    for (auto v : subG->get_nodes()) {
-        NodeDescription d = subG->get_node_description(v);
-        Coordinates c = d.get_coordinates();
-        unsigned int deg = d.get_degree();
-        double r = 2. * log(double(n) / deg);
-        c[0] = r;
-        float phi = 2 * 3.14 * static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        c[1] = phi;
-        d.set_coordinates(c);
-        subG->set_node_description(v, d);
-        d = subG->get_node_description(v);
-        c = d.get_coordinates();
-        out_embeddings_file << v << "\t" << c[0] << "\t" << c[1] << endl;
-    }
-*/
+
     return 0;
 }

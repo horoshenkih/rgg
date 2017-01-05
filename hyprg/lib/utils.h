@@ -14,6 +14,7 @@
 #include "embedding_model.h"
 
 Graph read_graph_from_file(const char *filename);
+void read_poincare_embedding_from_file(PoincareModel*, const char*);
 void write_embedding_to_file(const EmbeddingModel&, const char*);
 double generate_random_uniform(double, double);
 
