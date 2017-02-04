@@ -156,7 +156,9 @@ def main():
     parser.add_argument('--gr-max-pairs', type=int, default=10000)
     parser.add_argument('--core', action='store_true', help='evaluate core')
     parser.add_argument('--core-exponent', type=float, help='core exponent', default=0.5)
+    parser.add_argument('--seed', type=int, help='random seed', default=42)
     args = parser.parse_args()
+    np.random.seed(args.seed)
 
     vertices, edges = read_graph_from_file(args.graph_file)
     skip_lines=0
