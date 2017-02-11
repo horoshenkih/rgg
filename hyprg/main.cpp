@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
     cl.add_double_argument("ratio-first-second", 1., "ratio of nedges between first and second neighbours");
     cl.add_double_argument("ratio-between-second", 1., "ratio of nedges between second neighbours");
     cl.add_double_argument("ratio-random", 1., "ratio of nedges to random vertices");
-    cl.add_int_argument("n-epoch", 20, "random seed");
+    cl.add_int_argument("n-epoch", 20, "number of training epoch");
     cl.add_int_argument("seed", 42, "random seed");
 
     cl.parse_arguments(argc, argv);
