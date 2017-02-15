@@ -1,22 +1,40 @@
-# rgg
-Random geometric graphs
+# Random geometric graphs
 
-Utils:
-analyze.py              compute parameters of arbitrary graph
-generate-hrg.py         generate hyperbolic random graph
-fit.py                  compute graph embedding to hyperbolic space
-eval-embedding.py       estimate quality of graph embedding
+## hyprg -- fast embedder to hyperbolic space
+### build
+```
+cd hyprg/
+./build.sh
+```
+(cmake-3.6 or higher is required)
 
-Libraries:
-graph.py                TODO refactor
-embedding_models.py     TODO
-loss_functions.py       TODO
-optimization.py         TODO
-pair_generators.py      generate labelled pairs if vertices
+### usage
+```
+cd hyprg/
+./hyprg --help
+```
 
-Required packages:
+## Python utils
+|script|description|
+|---|---|
+| analyze.py   | compute parameters of arbitrary graph |
+| generate-hrg.py | generate hyperbolic random graph |
+| eval-embedding.py | estimate quality of graph embedding |
+| fit.py | compute graph embedding to hyperbolic space (deprecated, use ./hyprg/hyprg instead)|
+
+### Required packages
 python-networkx
 python-matplotlib
 python-tk
 python-scipy
 python-sklearn
+
+## Python libraries (deprecated)
+|library|description|
+|---|---|
+|graph.py|TODO refactor|
+|embedding_models.py|TODO|
+|loss_functions.py|TODO|
+|optimization.py|TODO|
+|pair_generators.py|generate labelled pairs of vertices|
+
