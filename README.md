@@ -6,7 +6,6 @@
 cd hyprg/
 ./build.sh
 ```
-(cmake-3.6 or higher is required)
 
 ### usage
 ```
