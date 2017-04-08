@@ -1,7 +1,7 @@
 # Random geometric graphs
 
 ## (deprecated) hyprg -- fast embedder to hyperbolic space
-This module is not supported anymore. New repository: https://github.com/khoroshenkikh-mipt/hyprg
+This library is not supported anymore. New repository: https://github.com/khoroshenkikh-mipt/hyprg
 
 ### build
 ```
@@ -15,7 +15,9 @@ cd hyprg/
 ./hyprg --help
 ```
 
-## Python utils
+## (deprecated) Python utils
+Not supported anymore. New repository: https://github.com/khoroshenkikh-mipt/rgg-utils
+
 |script|description|
 |---|---|
 | analyze.py   | compute parameters of arbitrary graph |
