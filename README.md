@@ -1,6 +1,8 @@
 # Random geometric graphs
 
-## hyprg -- fast embedder to hyperbolic space
+## (deprecated) hyprg -- fast embedder to hyperbolic space
+This module is not supported anymore. New repository: https://github.com/khoroshenkikh-mipt/hyprg
+
 ### build
 ```
 cd hyprg/
