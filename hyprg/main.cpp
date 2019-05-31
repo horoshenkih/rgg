@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <iterator>
 
-#include "lib/commandline.h"
-#include "lib/utils.h"
-#include "lib/pair_generator.h"
-#include "lib/embedding_model.h"
-#include "lib/loss_function.h"
-#include "lib/optimization.h"
+#include "src/commandline.h"
+#include "src/utils.h"
+#include "src/pair_generator.h"
+#include "src/embedding_model.h"
+#include "src/loss_function.h"
+#include "src/optimization.h"
 
 using std::cout;
 using std::endl;
